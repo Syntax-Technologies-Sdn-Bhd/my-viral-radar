@@ -217,6 +217,22 @@
   .pl.fb .dot { background: #4e8cff; }
   .pl.xhs .dot { background: #ff4d6d; }
   .pl.ig .dot { background: linear-gradient(135deg, #f9b233, #e1306c 55%, #8a3ab9); }
+  .btn.sync { border-color: rgba(63,214,143,.45); color: var(--green); }
+  .btn.sync:hover { background: rgba(63,214,143,.08); }
+  .btn.sync.busy { opacity: .75; cursor: progress; }
+  #syncBox { display: none; max-width: 1440px; margin: 12px auto 0; background: var(--card);
+    border: 1px solid rgba(63,214,143,.35); border-radius: 12px; padding: 12px 14px;
+    font-size: 12.5px; line-height: 1.7; color: var(--muted); }
+  #syncBox.on { display: block; }
+  #syncBox b { color: var(--text); }
+  #syncBox a { color: var(--accent); }
+  #syncBox ol { margin: 4px 0 8px 20px; }
+  #syncBox .srow2 { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; margin-top: 8px; }
+  #syncBox input { flex: 1; min-width: 220px; background: #0c0f16; color: var(--text);
+    border: 1px solid var(--border); border-radius: 9px; padding: 7px 10px; font-size: 12.5px; font-family: var(--font); }
+  #syncBox input:focus { border-color: var(--accent); outline: none; }
+  #syncBox .warn { color: var(--orange); }
+  #syncBox .ok { color: var(--green); }
   .pdot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
   .pdot.fb { background: #4e8cff; }
   .pdot.xhs { background: #ff4d6d; }
@@ -285,9 +301,11 @@
     </select>
     <button class="btn" id="fVideo"><svg class="ic"><use href="#i-video"/></svg>只看视频</button>
     <button class="btn" id="fDir"><svg class="ic"><use href="#i-users"/></svg>竞对名录</button>
+    <button class="btn sync" id="fSync" title="马上抓最新资料,不用等每周排程"><svg class="ic"><use href="#i-zap"/></svg><span id="fSyncTxt">Sync Now</span></button>
 
     <a class="btn" href="team.html" target="_top" title="工作台"><svg class="ic"><use href="#i-users"/></svg>工作台</a>
   </div>
+  <div id="syncBox"></div>
   <div class="tabs" id="tabs"></div>
   <div class="chips" id="presets"></div>
   <div class="chips" id="trends"></div>
@@ -700,6 +718,121 @@ if (TRENDS.length) {
     $('trends').appendChild(c);
   });
 } else { $('trends').style.display = 'none'; }
+
+// ---- Sync Now: start the Sync Content workflow from the page ----
+// A GitHub fine-grained token (Actions: read & write, this repo only) is
+// pasted once and kept in this browser's localStorage. It is never baked
+// into the page, so the public URL alone cannot start paid Apify runs.
+const GH = { owner: location.hostname.split('.')[0],
+             repo: location.pathname.split('/').filter(Boolean)[0] || '' };
+const GH_API = 'https://api.github.com/repos/' + GH.owner + '/' + GH.repo + '/actions';
+const GH_WEB = 'https://github.com/' + GH.owner + '/' + GH.repo + '/actions/workflows/sync.yml';
+const CHAIN = ['Sync Content', 'Transcribe Videos', 'Analyze Posts', 'Deploy Dashboard'];
+const lsGet = k => { try { return localStorage.getItem(k) || ''; } catch (e) { return ''; } };
+const lsSet = (k, v) => { try { v ? localStorage.setItem(k, v) : localStorage.removeItem(k); } catch (e) {} };
+let syncTimer = null;
+
+function syncBox(html) { const b = $('syncBox'); b.innerHTML = html; b.classList.toggle('on', !!html); }
+function syncBtn(txt, busy) { $('fSyncTxt').textContent = txt; $('fSync').classList.toggle('busy', !!busy); }
+
+async function gh(path, opts) {
+  const r = await fetch(GH_API + path, Object.assign({ headers: {
+    'Accept': 'application/vnd.github+json', 'Authorization': 'Bearer ' + lsGet('gh_tok') } }, opts || {}));
+  if (r.status === 401 || r.status === 403 || r.status === 404) { const e = new Error('token'); e.code = r.status; throw e; }
+  if (!r.ok) throw new Error('HTTP ' + r.status);
+  return r.status === 204 ? null : r.json();
+}
+
+function showSetup(msg) {
+  syncBox((msg ? '<div class="warn">' + esc(msg) + '</div>' : '')
+    + '<b>第一次用 Sync Now,要先放一把 GitHub 钥匙(只存在这台电脑的浏览器)</b>'
+    + '<ol><li>打开 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener">GitHub → 新建 fine-grained token</a></li>'
+    + '<li>Repository access 选 <b>Only select repositories</b> → <b>' + esc(GH.repo) + '</b></li>'
+    + '<li>Permissions → Repository permissions → <b>Actions: Read and write</b>,其他不用开</li>'
+    + '<li>按 Generate token,复制 <b>github_pat_</b> 开头那串,贴在下面</li></ol>'
+    + '<div class="srow2"><input id="ghTok" type="password" placeholder="github_pat_..." autocomplete="off">'
+    + '<button class="btn" id="ghSave">保存并同步</button><button class="btn" id="ghClose">取消</button></div>'
+    + '<div style="margin-top:6px">不想放钥匙?也可以 <a href="' + GH_WEB + '" target="_blank" rel="noopener">到 GitHub 手动按 Run workflow</a>。'
+    + '每同步一次约用 US$2 的 Apify 额度。</div>');
+  $('ghSave').onclick = () => {
+    const v = ($('ghTok').value || '').trim();
+    if (!v) return;
+    lsSet('gh_tok', v); syncNow(true);
+  };
+  $('ghClose').onclick = () => syncBox('');
+}
+
+async function chainRunning() {
+  const d = await gh('/runs?per_page=15');
+  return (d.workflow_runs || []).find(r => CHAIN.includes(r.name) && r.status !== 'completed');
+}
+
+async function syncNow(confirmed) {
+  if (!lsGet('gh_tok')) return showSetup();
+  syncBtn('检查中…', true);
+  try {
+    const running = await chainRunning();
+    if (running) { syncBtn('同步中…', true); watchSync(running.created_at); return; }
+    if (!confirmed) {
+      syncBtn('Sync Now');
+      syncBox('<b>马上同步最新资料?</b> 会抓 Instagram、Facebook、小红书,再转录、AI 拆解、更新网页,'
+        + '大约 20–60 分钟。每次约用 US$2 的 Apify 额度。'
+        + '<div class="srow2"><button class="btn sync" id="syncGo">开始同步</button>'
+        + '<button class="btn" id="syncNo">取消</button>'
+        + '<button class="btn" id="syncForget" title="清除这台电脑保存的 GitHub 钥匙">清除钥匙</button></div>');
+      $('syncGo').onclick = () => syncNow(true);
+      $('syncNo').onclick = () => syncBox('');
+      $('syncForget').onclick = () => { lsSet('gh_tok', ''); syncBox(''); toast('已清除这台电脑的 GitHub 钥匙', true); };
+      return;
+    }
+    const since = new Date(Date.now() - 5000).toISOString();
+    await gh('/workflows/sync.yml/dispatches', { method: 'POST', body: JSON.stringify({ ref: 'main' }) });
+    lsSet('sync_since', since);
+    watchSync(since);
+  } catch (e) {
+    syncBtn('Sync Now');
+    if (e.message === 'token') { lsSet('gh_tok', ''); showSetup('钥匙无效或权限不够(HTTP ' + e.code + '),请重新建一把。'); }
+    else syncBox('<span class="warn">同步没开始:' + esc(e.message) + '</span> 可以 <a href="' + GH_WEB + '" target="_blank" rel="noopener">到 GitHub 手动按 Run workflow</a>。');
+  }
+}
+
+// follow the chain until a Deploy Dashboard run that started after `since` finishes
+function watchSync(since) {
+  clearTimeout(syncTimer);
+  syncBtn('同步中…', true);
+  const tick = async () => {
+    try {
+      const runs = ((await gh('/runs?per_page=20')).workflow_runs || [])
+        .filter(r => CHAIN.includes(r.name) && r.created_at >= since)
+        .sort((a, b) => a.created_at.localeCompare(b.created_at));
+      const bad = runs.find(r => r.status === 'completed' && !['success', 'skipped'].includes(r.conclusion));
+      if (bad) {
+        syncBtn('Sync Now'); lsSet('sync_since', '');
+        syncBox('<span class="warn">「' + esc(bad.name) + '」失败了。</span> <a href="' + bad.html_url + '" target="_blank" rel="noopener">打开日志看原因</a>');
+        return;
+      }
+      const done = runs.find(r => r.name === 'Deploy Dashboard' && r.status === 'completed');
+      if (done) {
+        syncBtn('Sync Now'); lsSet('sync_since', '');
+        syncBox('<span class="ok">✓ 同步完成,网页已更新。</span> <a href="#" id="syncReload">按这里重新整理</a>(GitHub Pages 可能要再等 1 分钟)');
+        $('syncReload').onclick = e => { e.preventDefault(); location.reload(); };
+        return;
+      }
+      const cur = runs.length ? runs[runs.length - 1] : null;
+      const step = cur ? CHAIN.indexOf(cur.name) + 1 : 0;
+      syncBox('同步中:' + (cur ? '第 ' + step + '/4 步「' + esc(cur.name) + '」' : '等 GitHub 开始…')
+        + '。可以关掉这页,跑完网页会自动更新。 <a href="' + GH_WEB.replace('/workflows/sync.yml', '') + '" target="_blank" rel="noopener">在 GitHub 看进度</a>');
+    } catch (e) {
+      if (e.message === 'token') { syncBtn('Sync Now'); showSetup('钥匙失效了,请重新建一把。'); return; }
+    }
+    syncTimer = setTimeout(tick, 30000);
+  };
+  tick();
+}
+
+$('fSync').onclick = () => { if (!$('fSync').classList.contains('busy')) syncNow(false); };
+// a sync started from this browser earlier: keep showing its progress
+if (lsGet('gh_tok') && lsGet('sync_since')) watchSync(lsGet('sync_since'));
 
 render();
 refreshStatuses();
