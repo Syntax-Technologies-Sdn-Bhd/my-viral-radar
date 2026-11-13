@@ -128,6 +128,23 @@ Supabase 左下角 **Settings → API Keys**,复制三样(先放记事本):
 - 🤖 系统每周自动推荐相关账号进 competitors(active 未勾),觉得好就勾
 - 💰 费用:Apify 免费方案每月自带 $5 额度(不用绑卡),7 个竞对实测约 $1.1/月,一般用不完
 
+## 📘 Facebook 和小红书(可选,会多花 Apify 额度)
+
+除了 Instagram,系统也能每周抓 Facebook 专页和小红书主页的帖子,一起放进看板;最上面的 **Social Media** 下拉可以只看某个平台。
+
+1. 到 Supabase → SQL Editor,跑 `加竞对-SQL同行.sql` 里 Facebook / 小红书那一段(`competitors` 表里 `tracker` 填 `FB` 或 `XHS`,`username` 填**完整链接**)
+2. 什么都不用再设:Sync Content 每周会接着跑 Facebook 和小红书两步。表里没有 FB / XHS 的行就跳过、不花钱;这两步失败也不会挡住 Instagram
+3. 想马上看:Actions → Sync Content → Run workflow
+
+| Variable | 默认 | 作用 |
+|---|---|---|
+| `FB_RESULTS_LIMIT` | `10` | 每个 Facebook 专页抓几条(⚠️ 会加钱) |
+| `XHS_RESULTS_LIMIT` | `10` | 每个小红书账号抓几条(⚠️ 会加钱) |
+
+> 💡 Facebook 用 Apify 官方的 Facebook Posts Scraper(+ Facebook Pages Scraper 拿粉丝数);小红书用社区的 `zen-studio/rednote-user-profile-scraper`,不是官方维护,哪天抓不到就看 Sync Content 日志。
+> 💡 这两个平台的视频不转录,AI 拆解和「我的稿」用帖子文字。小红书没有官方嵌入,卡片显示封面,点了去小红书看。
+> 💡 只想停掉某个平台:Supabase 跑 `update competitors set active = false where tracker = 'XHS';`
+
 ## 🎬 我的稿:把爆款改写成你的口播稿(不用改代码)
 
 系统每周除了 AI 拆解,还会把每条爆款**按你的人设、语气、受众和红线**改写成一段 30-60 秒、可以直接对着镜头念的中文口播稿,放在卡片上绿色的「🎬 我的版本」里;点 **我的稿** 一键复制,点 **Brief** 也会一起带上。

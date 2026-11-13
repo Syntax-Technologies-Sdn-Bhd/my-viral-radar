@@ -25,16 +25,27 @@ CDN links let previously skipped videos transcribe); status / transcript /
 ai_breakdown are never in the payload, so worked rows are never clobbered.
 engagement_rate and viral_score are generated columns — never written.
 
-Env (required): TRACKER ("IG" or "AI"), APIFY_TOKEN, SUPABASE_URL,
+Trackers:
+  IG  -- Instagram. competitors.username = IG handle.
+  FB  -- Facebook pages (apify/facebook-posts-scraper + facebook-pages-scraper
+         for follower counts). competitors.username = page URL.
+  XHS -- 小红书 (zen-studio/rednote-user-profile-scraper, one call returns the
+         profile with fans + recent notes). competitors.username = profile URL.
+posts.competitor is always comp_key(username), the same key
+generate_dashboard.py uses to match posts to the competitors table.
+
+Env (required): TRACKER ("IG", "FB" or "XHS"), APIFY_TOKEN, SUPABASE_URL,
                 SUPABASE_SERVICE_ROLE_KEY
 Env (tuning, all optional -- set as GitHub Actions *Variables*):
      MIN_ER (0.02)  MIN_COMMENTS (15)  MIN_ENGAGE (20)  OUTLIER_X (1.5)
      TOP_N_PER_COMP (3)  MAX_PER_COMP (15)  DAYS_BACK (60)
      RESULTS_LIMIT (50)  MAX_ROWS (2500)
+     FB_RESULTS_LIMIT (10)  XHS_RESULTS_LIMIT (10)   -- posts per account, costs $
 """
 
 import json
 import os
+import re
 import statistics
 import sys
 import time
@@ -76,6 +87,14 @@ MAX_PER_COMP   = _envi("MAX_PER_COMP", 15)    # cap per account, so one big
 DAYS_BACK      = _envi("DAYS_BACK", 60)       # lookback window (free volume)
 RESULTS_LIMIT  = _envi("RESULTS_LIMIT", 50)   # posts scraped per account (costs $)
 MAX_ROWS       = _envi("MAX_ROWS", 2500)      # dashboard payload cap
+# FB / 小红书 bill per post with no free date filter, so they pull fewer per
+# account than IG and the DAYS_BACK window is applied here after the scrape.
+FB_RESULTS_LIMIT  = _envi("FB_RESULTS_LIMIT", 10)
+XHS_RESULTS_LIMIT = _envi("XHS_RESULTS_LIMIT", 10)
+
+FB_POSTS_ACTOR = "apify~facebook-posts-scraper"
+FB_PAGES_ACTOR = "apify~facebook-pages-scraper"
+XHS_ACTOR      = "zen-studio~rednote-user-profile-scraper"
 
 
 # ---------------------------------------------------------------------------
@@ -114,6 +133,53 @@ def sb(path, method="GET", data=None, prefer=None):
 # ---------------------------------------------------------------------------
 # Competitors (self-service list in Supabase)
 # ---------------------------------------------------------------------------
+
+
+def comp_key(name):
+    """One stable lowercase key per account, whatever form it was typed in.
+    Must stay identical to _handle() in generate_dashboard.py.
+      IG : '@Nike' / instagram.com/nike/        -> 'nike'
+      FB : facebook.com/SQLEstream/             -> 'sqlestream'
+           facebook.com/profile.php?id=123      -> '123'
+      XHS: xiaohongshu.com/user/profile/<hex>   -> '<hex>'
+    """
+    n = (name or "").strip()
+    low = n.lower()
+    if "facebook.com" in low:
+        u = urllib.parse.urlparse(n if "//" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        if parts and parts[0] == "profile.php":
+            return (urllib.parse.parse_qs(u.query).get("id") or [""])[0]
+        return parts[0].lower() if parts else ""
+    if "xiaohongshu.com" in low or "rednote.com" in low:
+        parts = [p for p in urllib.parse.urlparse(n if "//" in n else "https://" + n).path.split("/") if p]
+        if "profile" in parts and parts.index("profile") + 1 < len(parts):
+            return parts[parts.index("profile") + 1].lower()
+        return ""
+    if "instagram.com" in low:
+        parts = [p for p in urllib.parse.urlparse(n).path.split("/") if p]
+        if not parts or parts[0] in ("p", "reel", "reels", "stories", "tv"):
+            return ""
+        n = parts[0]
+    return n.lstrip("@").strip().lower()
+
+
+def fetch_competitor_urls():
+    """FB / XHS: the scrapers want full URLs; returns {key: url}."""
+    rows = sb(f"competitors?select=username&tracker=eq.{TRACKER}&active=is.true")
+    out = {}
+    for r in rows:
+        raw = (r.get("username") or "").strip()
+        key = comp_key(raw)
+        if not key:
+            print(f"  WARNING: cannot read an account from: {raw[:80]}")
+            continue
+        if TRACKER == "FB" and "facebook.com" not in raw.lower():
+            raw = f"https://www.facebook.com/{raw.lstrip('@')}"
+        if TRACKER == "XHS" and "//" not in raw:
+            raw = f"https://www.xiaohongshu.com/user/profile/{raw}"
+        out[key] = raw
+    return out
 
 
 def fetch_competitors():
@@ -218,9 +284,135 @@ def post_type(p):
                  "Video" if p.get("isVideo") else "Image")
 
 
+def _rec(row, likes, comments, fol):
+    """Wrap a posts-table row with the numbers the selection step needs."""
+    return {
+        "row": row,
+        "eng": likes + comments,
+        "er": (likes + comments) / fol,
+        "comments": comments,
+        # same weighting the dashboard sorts by, so "top N" means the same thing
+        "score": (likes + comments * 3) / fol * 100,
+    }
+
+
+def _recent(date_iso, today):
+    if not date_iso:
+        return True
+    try:
+        return (datetime.fromisoformat(today) - datetime.fromisoformat(date_iso)).days <= DAYS_BACK
+    except ValueError:
+        return True
+
+
+def fb_records(posts, followers_map, url_keys, today):
+    """apify/facebook-posts-scraper items -> {key: [rec]}."""
+    by_comp, nofol, broken, old = {}, 0, 0, 0
+    for p in posts:
+        pid = str(p.get("postId") or "").strip()
+        if p.get("error") or not pid:
+            broken += 1
+            continue
+        key = comp_key(p.get("facebookUrl") or "")
+        if key not in url_keys:
+            key = (p.get("pageName") or "").lower() or key
+        fol = followers_map.get(key, 0)
+        if not fol:
+            nofol += 1
+            continue
+        date = parse_date(p.get("timestamp") or p.get("time"))
+        if not _recent(date, today):
+            old += 1
+            continue
+        likes = int(p.get("likes") or p.get("topReactionsCount") or 0)
+        comments = int(p.get("comments") or 0)
+        media = p.get("media") or []
+        is_video = bool(p.get("isVideo")) or any(
+            (m.get("__typename") or "") == "Video" for m in media if isinstance(m, dict))
+        pt = "Video" if is_video else ("Carousel" if len(media) > 1 else "Image")
+        thumb = next((m.get("thumbnail") for m in media if isinstance(m, dict) and m.get("thumbnail")), None)
+        text = p.get("text") or ""
+        tags = [w.lstrip("#") for w in text.split() if w.startswith("#") and len(w) > 2]
+        row = {
+            "post_id": f"fb_{pid}",
+            "tracker": TRACKER,
+            "competitor": key,
+            "caption": text[:5000],
+            "post_type": pt,
+            "likes": likes,
+            "comments": comments,
+            "followers": fol,
+            "post_date": date,
+            "post_url": p.get("url") or f"https://www.facebook.com/{pid}",
+            "thumbnail_url": thumb,
+            "video_url": None,  # FB video files are not exposed; analysis uses the caption
+            "hashtags": ", ".join(tags),
+            "is_video": is_video,
+            "last_synced": today,
+        }
+        by_comp.setdefault(key, []).append(_rec(row, likes, comments, fol))
+    if old:
+        print(f"  {old} posts older than {DAYS_BACK} days skipped")
+    return by_comp, nofol, broken
+
+
+def xhs_records(items, today):
+    """zen-studio/rednote-user-profile-scraper rows -> {key: [rec]}.
+    One row = {profile, notes[]}; large profiles may span several rows."""
+    by_comp, nofol, broken, old = {}, 0, 0, 0
+    seen = set()
+    for it in items:
+        prof = it.get("profile") or {}
+        key = (it.get("_user_id") or prof.get("userid") or "").lower()
+        fol = int(prof.get("fans") or 0)
+        for n in it.get("notes") or []:
+            nid = str(n.get("id") or "").strip()
+            if not nid or not key:
+                broken += 1
+                continue
+            if nid in seen:
+                continue
+            seen.add(nid)
+            if not fol:
+                nofol += 1
+                continue
+            date = parse_date(n.get("create_time"))
+            if not _recent(date, today):
+                old += 1
+                continue
+            likes = int(n.get("likes") or 0)
+            comments = int(n.get("comments_count") or 0)
+            desc = n.get("desc") or n.get("display_title") or n.get("title") or ""
+            title = (n.get("title") or "").strip()
+            caption = (title + "\n" + desc) if title and title not in desc else desc
+            tags = [t.strip() for t in re.findall(r"#([^#\[\s]+)", desc)]
+            imgs = n.get("images_list") or []
+            is_video = (n.get("type") or "") == "video"
+            row = {
+                "post_id": f"xhs_{nid}",
+                "tracker": TRACKER,
+                "competitor": key,
+                "caption": caption.replace("[话题]#", "")[:5000],
+                "post_type": "Video" if is_video else ("Carousel" if len(imgs) > 1 else "Image"),
+                "likes": likes,
+                "comments": comments,
+                "followers": fol,
+                "post_date": date,
+                "post_url": f"https://www.xiaohongshu.com/explore/{nid}",
+                "thumbnail_url": (imgs[0].get("url") if imgs and isinstance(imgs[0], dict) else None),
+                "video_url": None,  # 小红书 video files need signed headers; analysis uses the caption
+                "hashtags": ", ".join(dict.fromkeys(tags)),
+                "is_video": is_video,
+                "last_synced": today,
+            }
+            by_comp.setdefault(key, []).append(_rec(row, likes, comments, fol))
+    if old:
+        print(f"  {old} notes older than {DAYS_BACK} days skipped")
+    return by_comp, nofol, broken
+
+
 def to_rows(posts, followers_map, today):
-    """Group the scrape by account, judge each account against ITSELF, and
-    guarantee every account contributes its best few posts."""
+    """Instagram: group the scrape by account, then select()."""
     by_comp, nofol, broken = {}, 0, 0
     for p in posts:
         if p.get("error") or not p.get("shortCode"):
@@ -260,7 +452,12 @@ def to_rows(posts, followers_map, today):
             # same weighting the dashboard sorts by, so "top N" means the same thing
             "score": (likes + comments * 3) / fol * 100,
         })
+    return select(by_comp, nofol, broken)
 
+
+def select(by_comp, nofol, broken):
+    """Judge each account against ITSELF and guarantee every account
+    contributes its best few posts."""
     rows, below_total, rescued_total = [], 0, 0
     print(f"  {'账号':<24}{'抓到':>5}{'入选':>5}{'补位':>5}  基准/中位互动")
     for u in sorted(by_comp):
@@ -345,6 +542,21 @@ def main():
         print("ERROR: APIFY_TOKEN / SUPABASE_URL / SUPABASE_SERVICE_ROLE_KEY required")
         sys.exit(1)
 
+    today = datetime.now(timezone.utc).date().isoformat()
+    if TRACKER in ("FB", "XHS"):
+        urls = fetch_competitor_urls()
+        if not urls:
+            print(f"No active {TRACKER} competitors in Supabase — nothing to do.")
+            return
+        print(f"[{TRACKER}] {len(urls)} accounts: {', '.join(list(urls)[:8])}"
+              + (" ..." if len(urls) > 8 else ""))
+        if TRACKER == "FB":
+            rows = scrape_fb(token, urls, today)
+        else:
+            rows = scrape_xhs(token, urls, today)
+        write_rows(rows, today)
+        return
+
     names = fetch_competitors()
     if not names:
         print(f"No active {TRACKER} competitors in Supabase — nothing to do.")
@@ -376,8 +588,42 @@ def main():
     print(f"  scraped {len(posts)} posts (last {DAYS_BACK} days, "
           f"<= {RESULTS_LIMIT}/account)")
 
-    today = datetime.now(timezone.utc).date().isoformat()
     rows = to_rows(posts, followers, today)
+    write_rows(rows, today)
+
+
+def scrape_fb(token, urls, today):
+    pages = run_actor(token, FB_PAGES_ACTOR,
+                      {"startUrls": [{"url": u} for u in urls.values()]}, "Step 1 FB pages")
+    followers = {}
+    for pg in pages:
+        key = comp_key(pg.get("facebookUrl") or pg.get("pageUrl") or "")
+        if key not in urls:
+            key = (pg.get("pageName") or "").lower() or key
+        c = pg.get("followers") or pg.get("likes") or 0
+        if key and c:
+            followers[key] = int(c)
+    print(f"  followers for {len(followers)}/{len(urls)}: "
+          + ", ".join(f"{k} {v:,}" for k, v in followers.items()))
+    posts = run_actor(token, FB_POSTS_ACTOR,
+                      {"startUrls": [{"url": u} for u in urls.values()],
+                       "resultsLimit": FB_RESULTS_LIMIT}, "Step 2 FB posts")
+    print(f"  scraped {len(posts)} posts (<= {FB_RESULTS_LIMIT}/page)")
+    return select(*fb_records(posts, followers, set(urls), today))
+
+
+def scrape_xhs(token, urls, today):
+    items = run_actor(token, XHS_ACTOR,
+                      {"profileUrls": list(urls.values()), "includeNotes": True,
+                       "maxNotesPerProfile": XHS_RESULTS_LIMIT}, "Step 1 小红书 profiles + notes")
+    for it in items:
+        prof = it.get("profile") or {}
+        print(f"  {prof.get('nickname') or it.get('_user_id')}: {prof.get('fans') or 0:,} 粉, "
+              f"{len(it.get('notes') or [])} notes")
+    return select(*xhs_records(items, today))
+
+
+def write_rows(rows, today):
     if rows:
         for i in range(0, len(rows), 100):
             sb("posts?on_conflict=post_id", method="POST", data=rows[i:i+100],

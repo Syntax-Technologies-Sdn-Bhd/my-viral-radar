@@ -21,3 +21,25 @@ jobs:
           SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
           SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
         run: python sync_content.py
+      # Facebook 和小红书:competitors 表里没有 FB / XHS 的行就什么都不做、不花钱。
+      # 失败(例如 Apify 额度用完)不挡住 Instagram 后面的转录 → 拆解 → 网页。
+      - name: Sync Facebook
+        continue-on-error: true
+        env:
+          TRACKER: FB
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DAYS_BACK: ${{ vars.DAYS_BACK }}
+          FB_RESULTS_LIMIT: ${{ vars.FB_RESULTS_LIMIT }}
+        run: python sync_content.py
+      - name: Sync 小红书
+        continue-on-error: true
+        env:
+          TRACKER: XHS
+          APIFY_TOKEN: ${{ secrets.APIFY_TOKEN }}
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SERVICE_ROLE_KEY: ${{ secrets.SUPABASE_SERVICE_ROLE_KEY }}
+          DAYS_BACK: ${{ vars.DAYS_BACK }}
+          XHS_RESULTS_LIMIT: ${{ vars.XHS_RESULTS_LIMIT }}
+        run: python sync_content.py

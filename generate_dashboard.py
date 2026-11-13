@@ -27,7 +27,7 @@ SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public key, baked
 # Falls back to sensible defaults so the page still builds before they're set.
 BRAND = os.environ.get("BRAND") or "爆款雷达"
 SYNC_DAY = os.environ.get("SYNC_DAY") or "每周"
-TRACKER_LABEL = {"IG": BRAND + " 竞对"}
+TRACKER_LABEL = {"IG": BRAND + " 竞对", "FB": BRAND + " 竞对", "XHS": BRAND + " 竞对"}
 STATUSES = ["未处理", "拍摄中", "已处理", "跳过"]
 
 # comment-bait CTA patterns — require an explicit gated keyword:
@@ -93,15 +93,40 @@ def fetch_posts(key):
 
 
 def _handle(name):
-    """Normalise a competitor handle the way sync_content.py does, so the two
-    scripts always agree on what '@Nike' and 'instagram.com/nike/' mean."""
+    """Normalise a competitor handle exactly like comp_key() in sync_content.py,
+    so the two scripts agree on what '@Nike', 'instagram.com/nike/',
+    'facebook.com/SQLEstream/' and a 小红书 profile URL mean."""
     n = (name or "").strip()
-    if "instagram.com" in n:
+    low = n.lower()
+    if "facebook.com" in low:
+        u = urllib.parse.urlparse(n if "//" in n else "https://" + n)
+        parts = [p for p in u.path.split("/") if p]
+        if parts and parts[0] == "profile.php":
+            return (urllib.parse.parse_qs(u.query).get("id") or [""])[0]
+        return parts[0].lower() if parts else ""
+    if "xiaohongshu.com" in low or "rednote.com" in low:
+        parts = [p for p in urllib.parse.urlparse(n if "//" in n else "https://" + n).path.split("/") if p]
+        if "profile" in parts and parts.index("profile") + 1 < len(parts):
+            return parts[parts.index("profile") + 1].lower()
+        return ""
+    if "instagram.com" in low:
         parts = [p for p in urllib.parse.urlparse(n).path.split("/") if p]
         if not parts or parts[0] in ("p", "reel", "reels", "stories", "tv"):
             return ""
         n = parts[0]
     return n.lstrip("@").strip().lower()
+
+
+TRACKER_PLAT = {"IG": "instagram", "FB": "facebook", "XHS": "xiaohongshu"}
+
+
+def account_link(plat, key):
+    """(label, profile URL) for the account a post came from."""
+    if plat == "facebook":
+        return key, f"https://www.facebook.com/{key}"
+    if plat == "xiaohongshu":
+        return "小红书 " + key[:6], f"https://www.xiaohongshu.com/user/profile/{key}"
+    return "@" + key, f"https://www.instagram.com/{key}/"
 
 
 def fetch_active_handles(key):
@@ -136,8 +161,14 @@ def normalize(r):
     tr = (r.get("transcript") or "")
     brk = (r.get("ai_breakdown") or "")
     er = r.get("engagement_rate") or 0
+    plat = TRACKER_PLAT.get(r.get("tracker"), "instagram")
+    who, who_url = account_link(plat, r.get("competitor") or "")
     return {
         "id": post_id,
+        "plat": plat,
+        "who": who,
+        "whoUrl": who_url,
+        "thumb": r.get("thumbnail_url") or "",
         "tracker": TRACKER_LABEL.get(r.get("tracker"), r.get("tracker") or "AI Competitors"),
         "competitor": r.get("competitor") or "",
         "caption": caption,
@@ -379,6 +410,15 @@ HTML_TEMPLATE = """<!DOCTYPE html>
   .pl.fb .dot { background: #4e8cff; }
   .pl.xhs .dot { background: #ff4d6d; }
   .pl.ig .dot { background: linear-gradient(135deg, #f9b233, #e1306c 55%, #8a3ab9); }
+  .pdot { width: 9px; height: 9px; border-radius: 50%; flex: none; }
+  .pdot.fb { background: #4e8cff; }
+  .pdot.xhs { background: #ff4d6d; }
+  .pdot.ig { background: linear-gradient(135deg, #f9b233, #e1306c 55%, #8a3ab9); }
+  .embed a.xthumb { position: absolute; inset: 0; display: block; background: #0b0e15; text-decoration: none; }
+  .embed a.xthumb img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .embed a.xthumb span { position: absolute; left: 50%; bottom: 14px; transform: translateX(-50%);
+    background: rgba(255,77,109,.92); color: #fff; font-size: 12.5px; font-weight: 600;
+    padding: 7px 14px; border-radius: 99px; white-space: nowrap; }
   .cotag { font-size: 10.5px; color: var(--muted); border: 1px solid var(--border);
     border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
 
@@ -448,14 +488,14 @@ HTML_TEMPLATE = """<!DOCTYPE html>
 <main>
   <section id="dir">
     <div class="dhead"><h2>竞对名录</h2><span id="platChips" class="chips" style="margin:0"></span>
-      <small>点公司名 = 只看该公司的爆款 · 帖子目前只从 Instagram 抓</small></div>
+      <small>点公司名 = 只看该公司的爆款 · 帖子从 Instagram、Facebook、小红书抓</small></div>
     <div class="dgrid" id="dgrid"></div>
   </section>
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg><span id="emptyMsg">没有符合条件的帖子</span></div>
   <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
 </main>
-<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram 官方 embed 播放</footer>
+<footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · Instagram / Facebook 帖子由官方 embed 播放,小红书点封面打开</footer>
 <div id="toast"></div>
 <script id="data" type="application/json">__DATA__</script>
 <script>
@@ -500,7 +540,13 @@ const IG2CO = {};
 COMPANIES.forEach(c => { if (c.instagram) IG2CO[c.instagram.toLowerCase()] = c.name; });
 // every scraped post comes from Instagram today; d.plat keeps the filter honest
 // if another platform's scraper is added later
-DATA.forEach(d => { d.co = IG2CO[(d.competitor || '').toLowerCase()] || ''; d.plat = d.plat || 'instagram'; });
+DATA.forEach(d => {
+  d.plat = d.plat || 'instagram';
+  // the generator matches FB / 小红书 accounts; older pages only had IG
+  if (!d.co && d.plat === 'instagram') d.co = IG2CO[(d.competitor || '').toLowerCase()] || '';
+  d.co = d.co || '';
+  if (!d.who) { d.who = '@' + d.competitor; d.whoUrl = 'https://www.instagram.com/' + d.competitor + '/'; }
+});
 const PLATS = [
   { k: 'website', label: '官网', cls: 'web' },
   { k: 'facebook', label: 'Facebook', cls: 'fb' },
@@ -508,18 +554,20 @@ const PLATS = [
   { k: 'instagram', label: 'Instagram', cls: 'ig' },
 ];
 let curPlat = '';
+const PLABEL = {}, PCLS = {};
+PLATS.forEach(p => { PLABEL[p.k] = p.label; PCLS[p.k] = p.cls; });
 
 // filters
-const coCount = {}; DATA.forEach(d => { const k = d.co || '@' + d.competitor; coCount[k] = (coCount[k] || 0) + 1; });
+const coCount = {}; DATA.forEach(d => { const k = d.co || d.who; coCount[k] = (coCount[k] || 0) + 1; });
 COMPANIES.forEach(c => {
   const o = document.createElement('option'); o.value = c.name;
   o.textContent = c.name + ' · ' + (coCount[c.name] || 0);
   $('fComp').appendChild(o);
 });
-const others = [...new Set(DATA.filter(d => !d.co).map(d => d.competitor))].sort();
+const others = [...new Set(DATA.filter(d => !d.co).map(d => d.who))].sort();
 if (others.length) {
   const g = document.createElement('optgroup'); g.label = '其他账号';
-  others.forEach(h => { const o = document.createElement('option'); o.value = '@' + h; o.textContent = '@' + h + ' · ' + coCount['@' + h]; g.appendChild(o); });
+  others.forEach(h => { const o = document.createElement('option'); o.value = h; o.textContent = h + ' · ' + coCount[h]; g.appendChild(o); });
   $('fComp').appendChild(g);
 }
 PLATS.filter(p => p.k !== 'website').forEach(p => {
@@ -534,7 +582,7 @@ function matchQ(d) {
   return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor + ' ' + d.co).toLowerCase().includes(q);
 }
 
-function compOf(d) { return d.co || '@' + d.competitor; }
+function compOf(d) { return d.co || d.who; }
 
 function basePool() {
   const t = $('fTracker').value, c = $('fComp').value, pf = $('fPlat').value;
@@ -579,12 +627,25 @@ function renderTabs() {
 const io = new IntersectionObserver(entries => {
   entries.forEach(e => {
     if (e.isIntersecting) {
-      const el = e.target, pid = el.dataset.pid;
-      if (!el.querySelector('iframe')) {
-        const f = document.createElement('iframe');
-        f.src = 'https://www.instagram.com/p/' + pid + '/embed/';
-        f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
-        el.appendChild(f);
+      const el = e.target, pid = el.dataset.pid, d = byRec[pid] || {};
+      if (!el.querySelector('iframe, a.xthumb')) {
+        if (d.plat === 'xiaohongshu') {
+          // 小红书 has no embed player: show the cover and open the note on click
+          const a = document.createElement('a');
+          a.className = 'xthumb'; a.href = d.url; a.target = '_blank'; a.rel = 'noopener';
+          a.innerHTML = (d.thumb ? '<img loading="lazy" referrerpolicy="no-referrer" alt="">' : '')
+            + '<span>' + (d.video ? '▶ ' : '') + '在小红书打开</span>';
+          if (d.thumb) a.querySelector('img').src = d.thumb;
+          el.appendChild(a);
+        } else {
+          const f = document.createElement('iframe');
+          f.src = d.plat === 'facebook'
+            ? 'https://www.facebook.com/plugins/' + (d.video ? 'video' : 'post') + '.php?href='
+              + encodeURIComponent(d.url) + '&show_text=true&width=500'
+            : 'https://www.instagram.com/p/' + pid + '/embed/';
+          f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media; clipboard-write';
+          el.appendChild(f);
+        }
       }
       io.unobserve(el);
     }
@@ -601,7 +662,7 @@ async function setStatus(d, val) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     d.status = val;
     cacheStatus(d.id, val);
-    toast('✓ @' + d.competitor + ' 已移到「' + val + '」', true);
+    toast('✓ ' + d.who + ' 已移到「' + val + '」', true);
   } catch (e) {
     toast('更新失败: ' + e.message + (String(e.message).includes('401') || String(e.message).includes('403') ? ' — 密钥无效?' : ''), false);
   }
@@ -635,7 +696,8 @@ function card(d, idx) {
     <div class="meta">
       <div class="row1">
         <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
-        <a class="who" href="https://www.instagram.com/${d.competitor}/" target="_blank">@${d.competitor}</a>
+        <span class="pdot ${PCLS[d.plat] || 'ig'}" title="${PLABEL[d.plat] || 'Instagram'}"></span>
+        <a class="who" href="${esc(d.whoUrl)}" target="_blank" rel="noopener">${esc(d.who)}</a>
         ${d.co ? '<span class="cotag">' + esc(d.co) + '</span>' : ''}
         <span class="badge">${d.type || '-'}</span>
         ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
@@ -659,7 +721,7 @@ function card(d, idx) {
         ${tr ? '<button class="abtn mic" title="复制视频口播逐字稿">' + I('mic') + '口播</button>' : ''}
         ${d.my ? '<button class="abtn minec" title="复制我的改写口播稿(可直接拍)">' + I('mic') + '我的稿</button>' : ''}
         <button class="abtn brief" title="复制拍摄 Brief(数据+Hook+AI拆解+我的稿+口播稿+文案)">${I('clip')}Brief</button>
-        <a class="abtn" href="${d.url}" target="_blank" title="打开 Instagram 原帖">${I('ext')}</a></div>
+        <a class="abtn" href="${esc(d.url)}" target="_blank" rel="noopener" title="打开 ${PLABEL[d.plat] || 'Instagram'} 原帖">${I('ext')}</a></div>
     </div>`;
   const capEl = el.querySelector('.cap');
   const restTxt = lines.slice(1).join('\\n');
@@ -682,7 +744,7 @@ function card(d, idx) {
     navigator.clipboard.writeText(d.my).then(() => toast('✓ 我的改写稿已复制', true));
   el.querySelector('.brief').onclick = () => {
     const NL = String.fromCharCode(10);
-    const parts = ['🎬 爆款参考 @' + d.competitor + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
+    const parts = ['🎬 爆款参考 ' + (PLABEL[d.plat] || 'Instagram') + ' ' + d.who + (d.co ? '(' + d.co + ')' : '') + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
       '📊 🔥' + d.score + ' | ER ' + d.er + '% | ❤️ ' + (d.likes > 0 ? fmt(d.likes) : '隐藏') +
       ' | 💬 ' + fmt(d.comments) + ' | 👥 ' + fmt(d.followers) + (ago ? ' | ' + ago : ''),
       '🔗 ' + d.url, '✍️ Hook: ' + hook];
@@ -734,7 +796,7 @@ function renderDir() {
     el.className = 'co' + (c.self ? ' self' : '') + (cur === c.name ? ' pick' : '');
     const n = coCount[c.name] || 0;
     el.innerHTML = '<div class="cn"><b title="只看这家公司的爆款">' + esc(c.name) + '</b>'
-      + '<span class="pc">' + (n ? n + ' 条爆款' : (c.instagram ? '还没抓到帖子' : '没有 IG,不抓')) + '</span></div>'
+      + '<span class="pc">' + (n ? n + ' 条爆款' : '还没抓到帖子') + '</span></div>'
       + '<div class="links">' + plats.map(p => plLink(c, p)).join('') + '</div>';
     el.querySelector('b').onclick = () => {
       $('fComp').value = cur === c.name ? '' : c.name; shown = PAGE; render();
@@ -753,7 +815,7 @@ function render() {
   $('empty').style.display = arr.length ? 'none' : '';
   const pf = $('fPlat').value, pl = PLATS.find(p => p.k === pf);
   $('emptyMsg').textContent = pl && !DATA.some(d => d.plat === pf)
-    ? pl.label + ' 的帖子还没接入抓取(目前只抓 Instagram)。上面「竞对名录」列出各公司的 ' + pl.label + ' 主页。'
+    ? '还没有 ' + pl.label + ' 的帖子:先在 Supabase 加上各公司的 ' + pl.label + ' 账号,等每周同步。上面「竞对名录」列出各公司的 ' + pl.label + ' 主页。'
     : '没有符合条件的帖子';
   $('moreWrap').style.display = arr.length > shown ? '' : 'none';
 }
@@ -1195,7 +1257,7 @@ async function setStatus(d, val) {
     if (!r.ok) throw new Error('HTTP ' + r.status);
     d.status = val;
     cacheStatus(d.id, val);
-    toast('✓ @' + d.competitor + ' → ' + val, true);
+    toast('✓ ' + (d.who || ('@' + d.competitor)) + ' → ' + val, true);
   } catch (e) {
     toast('失败: ' + e.message, false);
   }
@@ -1220,7 +1282,7 @@ function renderWork() {
   if (!shoot.length) sl.innerHTML = '<div class="none">队列是空的 — Marketer 去爆款雷达挑几条拖进「拍摄中」</div>';
   shoot.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
-    r.innerHTML = '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+    r.innerHTML = '<a class="who2" href="' + esc(d.whoUrl || ('https://www.instagram.com/' + d.competitor + '/')) + '" target="_blank" rel="noopener">' + esc(d.who || ('@' + d.competitor)) + '</a>'
       + ((d.x || 0) >= 2 ? '<span class="xb">×' + d.x + '</span>' : '')
       + '<span class="hookline">' + esc(firstLine(d.caption)) + '</span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1238,7 +1300,7 @@ function renderWork() {
   picks.forEach(d => {
     const r = document.createElement('div'); r.className = 'row';
     r.innerHTML = '<span class="xb">×' + d.x + '</span>'
-      + '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+      + '<a class="who2" href="' + esc(d.whoUrl || ('https://www.instagram.com/' + d.competitor + '/')) + '" target="_blank" rel="noopener">' + esc(d.who || ('@' + d.competitor)) + '</a>'
       + '<span class="hookline">' + esc(firstLine(d.caption))
       + '<small>🔥' + d.score + ' · ER ' + d.er + '% · 💬' + fmt(d.comments) + '</small></span>'
       + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
@@ -1336,13 +1398,26 @@ def main():
             print("  WARNING: that would hide every post - skipping the active "
                   "filter. Check the usernames in the competitors table.")
 
+    # company name per post, matched on the platform's own account key
+    co_by = {}
+    for c in load_companies():
+        for plat in ("instagram", "facebook", "xiaohongshu"):
+            k = _handle(c[plat]) if c[plat] else ""
+            if k:
+                co_by[(plat, k)] = c["name"]
+    for p in unique:
+        p["co"] = co_by.get((p["plat"], _handle(p["competitor"])), "")
+        if p["co"] and p["plat"] == "xiaohongshu":
+            p["who"] = "小红书主页"  # the company tag beside it names the account
+
     # outlier multiplier: post score vs the account's own median score
     import statistics
     by_comp = {}
+    # keyed by platform too: the same handle on IG and FB is two audiences
     for p in unique:
-        by_comp.setdefault(p["competitor"], []).append(p["score"] or 0)
+        by_comp.setdefault((p["plat"], p["competitor"]), []).append(p["score"] or 0)
     for p in unique:
-        scores = [s for s in by_comp[p["competitor"]] if s > 0]
+        scores = [s for s in by_comp[(p["plat"], p["competitor"])] if s > 0]
         med = statistics.median(scores) if len(scores) >= 3 else 0
         p["x"] = round((p["score"] or 0) / med, 1) if med > 0 else 0
 
