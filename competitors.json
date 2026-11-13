@@ -1,0 +1,17 @@
+{
+  "_note": "竞对名录,dashboard 的「竞对名录」和公司筛选都读这个文件。来源:Claude 大脑/reference/competitors.xlsx(2026-11-13)。没有的平台留空字符串。instagram 只填账号名,不要 @。self=true 表示自己公司。",
+  "companies": [
+    {"name": "Syntax（我）", "self": true, "website": "https://syntech.com.my/", "facebook": "https://www.facebook.com/SyntaxTechnologies/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/63f1e2b5000000000f012765", "instagram": "syntaxtechnologiessb"},
+    {"name": "eStream（SQL HQ）", "website": "https://www.sql.com.my/", "facebook": "https://www.facebook.com/SQLEstream/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/60ba509f0000000001008605", "instagram": "sqlestream"},
+    {"name": "AMS", "website": "https://www.sql-software.com/", "facebook": "https://www.facebook.com/sql.ams.software/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/67cf04ca000000000801644f", "instagram": "ams.software.sql"},
+    {"name": "MySoftware", "website": "https://www.sqlacc.com/", "facebook": "https://www.facebook.com/SQLMySoftware/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/62b95dc80000000019028283", "instagram": "sql_mysoftware"},
+    {"name": "eSoft", "website": "https://www.esoft.my/", "facebook": "https://www.facebook.com/eSoft.my/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/6302fe30000000000f004a8e", "instagram": "esoftsql"},
+    {"name": "WiSoft", "website": "https://sql-accounting.com/", "facebook": "https://www.facebook.com/wisoftsolution", "xiaohongshu": "", "instagram": "wisoft.solutions"},
+    {"name": "EIST", "website": "https://www.eistsystem.com/", "facebook": "https://www.facebook.com/sqlaccounteist/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/659b8ece000000001f012b31/", "instagram": "sqlaccount_eist"},
+    {"name": "Alpine", "website": "https://alpinesoftware.com.my/", "facebook": "https://www.facebook.com/AlpineSQL", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/5e99d36e0000000001001c95", "instagram": "alpinesql"},
+    {"name": "GoLink", "website": "https://www.golink.com.my/", "facebook": "https://www.facebook.com/golinksql", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/63759adc000000001f01ba10", "instagram": ""},
+    {"name": "MyPoint", "website": "https://www.sqlaccountingsoftware.com.my/", "facebook": "https://www.facebook.com/SQLAccountingSoftwareGST/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/65eadca600000000050080a3", "instagram": ""},
+    {"name": "Agile", "website": "https://sql-account.my/", "facebook": "https://www.facebook.com/agile.my", "xiaohongshu": "", "instagram": "agile.my"},
+    {"name": "Emmanu", "website": "https://www.sqlaccount.biz/", "facebook": "https://www.facebook.com/el.com.my", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/665202150000000003030818", "instagram": ""}
+  ]
+}

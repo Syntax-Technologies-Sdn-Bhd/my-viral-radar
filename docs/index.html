@@ -191,6 +191,35 @@
     flex-direction: column; align-items: center; gap: 12px; font-size: 14px; }
   .empty .ic { width: 34px; height: 34px; stroke-width: 1.5; color: #2c3546; }
 
+  /* 竞对名录 — company directory with per-platform links */
+  #dir { display: none; margin-bottom: 22px; }
+  #dir.on { display: block; }
+  .dhead { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin-bottom: 12px; }
+  .dhead h2 { font-family: var(--disp); font-size: 15px; font-weight: 600; margin-right: 6px; }
+  .dhead small { color: var(--faint); font-size: 11.5px; margin-left: auto; }
+  .dgrid { display: grid; grid-template-columns: repeat(auto-fill, minmax(260px, 1fr)); gap: 12px; }
+  .co { background: var(--card); border: 1px solid var(--border); border-radius: 14px;
+    padding: 12px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .co.self { border-color: rgba(255,120,90,.45); }
+  .co.pick { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+  .co .cn { display: flex; align-items: center; gap: 8px; }
+  .co .cn b { font-size: 14px; font-weight: 600; cursor: pointer; }
+  .co .cn b:hover { color: var(--accent); }
+  .co .cn .pc { margin-left: auto; font-size: 11px; color: var(--faint); font-variant-numeric: tabular-nums; }
+  .links { display: flex; flex-wrap: wrap; gap: 6px; }
+  .pl { display: inline-flex; align-items: center; gap: 5px; font-size: 11.5px; text-decoration: none;
+    border: 1px solid var(--border); border-radius: 8px; padding: 4.5px 9px; color: var(--muted);
+    background: #0c0f16; transition: border-color .18s, color .18s; white-space: nowrap; }
+  .pl .dot { width: 7px; height: 7px; border-radius: 50%; flex: none; }
+  a.pl:hover { color: var(--text); border-color: var(--border-hi); }
+  .pl.none { color: var(--faint); border-style: dashed; opacity: .7; }
+  .pl.web .dot { background: #8a94a6; }
+  .pl.fb .dot { background: #4e8cff; }
+  .pl.xhs .dot { background: #ff4d6d; }
+  .pl.ig .dot { background: linear-gradient(135deg, #f9b233, #e1306c 55%, #8a3ab9); }
+  .cotag { font-size: 10.5px; color: var(--muted); border: 1px solid var(--border);
+    border-radius: 99px; padding: 2px 8px; white-space: nowrap; }
+
   footer { color: var(--faint); font-size: 11px; text-align: center; padding: 22px; }
 
   #toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(8px);
@@ -235,7 +264,7 @@
     <div class="search"><svg class="ic"><use href="#i-search"/></svg>
       <input id="fSearch" placeholder="搜文案 / hashtag / 账号"></div>
     <select id="fTracker"><option value="">全部 Tracker</option></select>
-    <select id="fComp"><option value="">全部 Competitor</option></select>
+    <select id="fComp"><option value="">全部公司</option></select>
     <select id="fSort">
       <option value="x">按 爆款倍数 (vs 自家平均)</option>
       <option value="score">按 Viral Score</option>
@@ -245,6 +274,7 @@
       <option value="date">按 最新日期</option>
     </select>
     <button class="btn" id="fVideo"><svg class="ic"><use href="#i-video"/></svg>只看视频</button>
+    <button class="btn" id="fDir"><svg class="ic"><use href="#i-users"/></svg>竞对名录</button>
 
     <a class="btn" href="team.html" target="_top" title="工作台"><svg class="ic"><use href="#i-users"/></svg>工作台</a>
   </div>
@@ -253,6 +283,11 @@
   <div class="chips" id="trends"></div>
 </header>
 <main>
+  <section id="dir">
+    <div class="dhead"><h2>竞对名录</h2><span id="platChips" class="chips" style="margin:0"></span>
+      <small>点公司名 = 只看该公司的爆款 · 帖子目前只从 Instagram 抓</small></div>
+    <div class="dgrid" id="dgrid"></div>
+  </section>
   <div class="grid" id="grid"></div>
   <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
   <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
@@ -296,19 +331,44 @@ function toast(msg, ok) {
   clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
 }
 
+// companies (competitors.json): map each post's IG handle to its company
+const COMPANIES = [{"name": "Syntax（我）", "self": true, "website": "https://syntech.com.my/", "facebook": "https://www.facebook.com/SyntaxTechnologies/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/63f1e2b5000000000f012765", "instagram": "syntaxtechnologiessb"}, {"name": "eStream（SQL HQ）", "self": false, "website": "https://www.sql.com.my/", "facebook": "https://www.facebook.com/SQLEstream/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/60ba509f0000000001008605", "instagram": "sqlestream"}, {"name": "AMS", "self": false, "website": "https://www.sql-software.com/", "facebook": "https://www.facebook.com/sql.ams.software/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/67cf04ca000000000801644f", "instagram": "ams.software.sql"}, {"name": "MySoftware", "self": false, "website": "https://www.sqlacc.com/", "facebook": "https://www.facebook.com/SQLMySoftware/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/62b95dc80000000019028283", "instagram": "sql_mysoftware"}, {"name": "eSoft", "self": false, "website": "https://www.esoft.my/", "facebook": "https://www.facebook.com/eSoft.my/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/6302fe30000000000f004a8e", "instagram": "esoftsql"}, {"name": "WiSoft", "self": false, "website": "https://sql-accounting.com/", "facebook": "https://www.facebook.com/wisoftsolution", "xiaohongshu": "", "instagram": "wisoft.solutions"}, {"name": "EIST", "self": false, "website": "https://www.eistsystem.com/", "facebook": "https://www.facebook.com/sqlaccounteist/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/659b8ece000000001f012b31/", "instagram": "sqlaccount_eist"}, {"name": "Alpine", "self": false, "website": "https://alpinesoftware.com.my/", "facebook": "https://www.facebook.com/AlpineSQL", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/5e99d36e0000000001001c95", "instagram": "alpinesql"}, {"name": "GoLink", "self": false, "website": "https://www.golink.com.my/", "facebook": "https://www.facebook.com/golinksql", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/63759adc000000001f01ba10", "instagram": ""}, {"name": "MyPoint", "self": false, "website": "https://www.sqlaccountingsoftware.com.my/", "facebook": "https://www.facebook.com/SQLAccountingSoftwareGST/", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/65eadca600000000050080a3", "instagram": ""}, {"name": "Agile", "self": false, "website": "https://sql-account.my/", "facebook": "https://www.facebook.com/agile.my", "xiaohongshu": "", "instagram": "agile.my"}, {"name": "Emmanu", "self": false, "website": "https://www.sqlaccount.biz/", "facebook": "https://www.facebook.com/el.com.my", "xiaohongshu": "https://www.xiaohongshu.com/user/profile/665202150000000003030818", "instagram": ""}];
+const IG2CO = {};
+COMPANIES.forEach(c => { if (c.instagram) IG2CO[c.instagram.toLowerCase()] = c.name; });
+DATA.forEach(d => { d.co = IG2CO[(d.competitor || '').toLowerCase()] || ''; });
+const PLATS = [
+  { k: 'website', label: '官网', cls: 'web' },
+  { k: 'facebook', label: 'Facebook', cls: 'fb' },
+  { k: 'xiaohongshu', label: '小红书', cls: 'xhs' },
+  { k: 'instagram', label: 'Instagram', cls: 'ig' },
+];
+let curPlat = '';
+
 // filters
-const comps = [...new Set(DATA.map(d => d.competitor))].sort();
-comps.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = '@'+c; $('fComp').appendChild(o); });
+const coCount = {}; DATA.forEach(d => { const k = d.co || '@' + d.competitor; coCount[k] = (coCount[k] || 0) + 1; });
+COMPANIES.forEach(c => {
+  const o = document.createElement('option'); o.value = c.name;
+  o.textContent = c.name + ' · ' + (coCount[c.name] || 0);
+  $('fComp').appendChild(o);
+});
+const others = [...new Set(DATA.filter(d => !d.co).map(d => d.competitor))].sort();
+if (others.length) {
+  const g = document.createElement('optgroup'); g.label = '其他账号';
+  others.forEach(h => { const o = document.createElement('option'); o.value = '@' + h; o.textContent = '@' + h + ' · ' + coCount['@' + h]; g.appendChild(o); });
+  $('fComp').appendChild(g);
+}
 [...new Set(DATA.map(d => d.tracker))].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('fTracker').appendChild(o); });
 
 function matchQ(d) {
   const q = ($('fSearch').value || '').trim().toLowerCase();
-  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor).toLowerCase().includes(q);
+  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor + ' ' + d.co).toLowerCase().includes(q);
 }
+
+function compOf(d) { return d.co || '@' + d.competitor; }
 
 function basePool() {
   const t = $('fTracker').value, c = $('fComp').value;
-  return DATA.filter(d => (!t || d.tracker === t) && (!c || d.competitor === c) && (!videoOnly || d.video)
+  return DATA.filter(d => (!t || d.tracker === t) && (!c || compOf(d) === c) && (!videoOnly || d.video)
     && matchQ(d) && PRESETS.every(p => !presetOn[p.k] || p.f(d)));
 }
 
@@ -406,6 +466,7 @@ function card(d, idx) {
       <div class="row1">
         <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
         <a class="who" href="https://www.instagram.com/${d.competitor}/" target="_blank">@${d.competitor}</a>
+        ${d.co ? '<span class="cotag">' + esc(d.co) + '</span>' : ''}
         <span class="badge">${d.type || '-'}</span>
         ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
         ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
@@ -465,8 +526,52 @@ function card(d, idx) {
   return el;
 }
 
+function plLink(c, p) {
+  const v = c[p.k];
+  if (!v) return '<span class="pl ' + p.cls + ' none"><span class="dot"></span>' + p.label + ' ' + (p.k === 'instagram' ? '未找到' : '未提供') + '</span>';
+  let href = v, txt = p.label;
+  if (p.k === 'instagram') { href = 'https://www.instagram.com/' + v + '/'; txt = '@' + v; }
+  else if (p.k === 'website') { try { txt = new URL(v).hostname.replace(/^www\./, ''); } catch (e) {} }
+  return '<a class="pl ' + p.cls + '" href="' + esc(href) + '" target="_blank" rel="noopener"><span class="dot"></span>' + esc(txt) + '</a>';
+}
+
+function renderPlatChips() {
+  const box = $('platChips'); box.innerHTML = '';
+  [{ k: '', label: '全部平台' }, ...PLATS].forEach(p => {
+    const n = p.k ? COMPANIES.filter(c => c[p.k]).length : COMPANIES.length;
+    const el = document.createElement('span');
+    el.className = 'chip2' + (curPlat === p.k ? ' on' : '');
+    el.textContent = p.label + ' ' + n + (p.k ? '/' + COMPANIES.length : '');
+    el.onclick = () => { curPlat = p.k; renderDir(); };
+    box.appendChild(el);
+  });
+}
+
+function renderDir() {
+  renderPlatChips();
+  const cur = $('fComp').value;
+  const plats = curPlat ? PLATS.filter(p => p.k === curPlat) : PLATS;
+  const list = COMPANIES.slice();
+  if (curPlat) list.sort((a, b) => (b[curPlat] ? 1 : 0) - (a[curPlat] ? 1 : 0));
+  const g = $('dgrid'); g.innerHTML = '';
+  list.forEach(c => {
+    const el = document.createElement('div');
+    el.className = 'co' + (c.self ? ' self' : '') + (cur === c.name ? ' pick' : '');
+    const n = coCount[c.name] || 0;
+    el.innerHTML = '<div class="cn"><b title="只看这家公司的爆款">' + esc(c.name) + '</b>'
+      + '<span class="pc">' + (n ? n + ' 条爆款' : (c.instagram ? '还没抓到帖子' : '没有 IG,不抓')) + '</span></div>'
+      + '<div class="links">' + plats.map(p => plLink(c, p)).join('') + '</div>';
+    el.querySelector('b').onclick = () => {
+      $('fComp').value = cur === c.name ? '' : c.name; shown = PAGE; render();
+      if ($('fComp').value) $('grid').scrollIntoView({ behavior: 'smooth', block: 'start' });
+    };
+    g.appendChild(el);
+  });
+}
+
 function render() {
   renderTabs();
+  if ($('dir').classList.contains('on')) renderDir();
   const arr = filtered();
   const grid = $('grid'); grid.innerHTML = '';
   arr.slice(0, shown).forEach((d, i) => grid.appendChild(card(d, i)));
@@ -512,6 +617,13 @@ async function refreshStatuses() {
 $('fSearch').oninput = () => { shown = PAGE; render(); };
 $('fVideo').onclick = () => { videoOnly = !videoOnly; $('fVideo').classList.toggle('on', videoOnly); shown = PAGE; render(); };
 $('moreBtn').onclick = () => { shown += PAGE; render(); };
+$('fDir').onclick = () => {
+  const on = !$('dir').classList.contains('on');
+  $('dir').classList.toggle('on', on); $('fDir').classList.toggle('on', on);
+  try { localStorage.setItem('dir_on', on ? '1' : ''); } catch (e) {}
+  if (on) renderDir();
+};
+try { if (localStorage.getItem('dir_on')) { $('dir').classList.add('on'); $('fDir').classList.add('on'); } } catch (e) {}
 
 // preset quick filters
 $('presets').innerHTML = '<span class="lbl">快筛</span>';
