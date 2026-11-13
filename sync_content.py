@@ -570,12 +570,31 @@ def main():
     profiles = run_actor(token, "apify~instagram-profile-scraper",
                          {"usernames": names}, "Step 1 profiles")
     followers = {}
-    for pr in profiles:
-        u = (pr.get("username") or "").lower().strip()
-        c = pr.get("followersCount") or pr.get("followers") or 0
-        if u and c:
-            followers[u] = int(c)
-    print(f"  followers for {len(followers)}/{len(names)}")
+
+    def take(items):
+        for pr in items:
+            u = (pr.get("username") or "").lower().strip()
+            c = pr.get("followersCount") or pr.get("followers") or 0
+            if u and c:
+                followers[u] = int(c)
+
+    take(profiles)
+    # Apify sometimes scrapes a profile but times out saving it ("Failed to
+    # save results to the dataset"). Without followers every post of that
+    # account is dropped, so ask once more for just the missing ones.
+    missing = [n for n in names if n.lower() not in followers]
+    if missing:
+        print(f"  no followers for {', '.join(missing)} - retrying once")
+        try:
+            retry = run_actor(token, "apify~instagram-profile-scraper",
+                              {"usernames": missing}, "Step 1b profiles retry")
+            take(retry)
+            profiles = profiles + retry
+        except Exception as exc:
+            print(f"  retry failed ({exc})")
+    still = [n for n in names if n.lower() not in followers]
+    print(f"  followers for {len(followers)}/{len(names)}"
+          + (f" | still missing: {', '.join(still)}" if still else ""))
 
     try:
         suggest_competitors(profiles)
@@ -592,22 +611,54 @@ def main():
     write_rows(rows, today)
 
 
+def _fb_key(item, urls):
+    key = comp_key(item.get("facebookUrl") or item.get("pageUrl") or item.get("inputUrl") or "")
+    if key not in urls:
+        key = (item.get("pageName") or "").lower() or key
+    return key
+
+
 def scrape_fb(token, urls, today):
-    pages = run_actor(token, FB_PAGES_ACTOR,
-                      {"startUrls": [{"url": u} for u in urls.values()]}, "Step 1 FB pages")
     followers = {}
-    for pg in pages:
-        key = comp_key(pg.get("facebookUrl") or pg.get("pageUrl") or "")
-        if key not in urls:
-            key = (pg.get("pageName") or "").lower() or key
-        c = pg.get("followers") or pg.get("likes") or 0
-        if key and c:
-            followers[key] = int(c)
+
+    def take(pages):
+        for pg in pages:
+            key = _fb_key(pg, urls)
+            c = pg.get("followers") or pg.get("likes") or 0
+            if key and c:
+                followers[key] = int(c)
+
+    take(run_actor(token, FB_PAGES_ACTOR,
+                   {"startUrls": [{"url": u} for u in urls.values()]}, "Step 1 FB pages"))
+    # The pages scraper now and then returns an empty item for a page that is
+    # fine in a browser; one retry for just those pages usually fills it in.
+    missing = {k: u for k, u in urls.items() if k not in followers}
+    if missing:
+        print(f"  no followers for {', '.join(missing)} - retrying once")
+        try:
+            take(run_actor(token, FB_PAGES_ACTOR,
+                           {"startUrls": [{"url": u} for u in missing.values()]},
+                           "Step 1b FB pages retry"))
+        except Exception as exc:
+            print(f"  retry failed ({exc})")
+    still = [k for k in urls if k not in followers]
     print(f"  followers for {len(followers)}/{len(urls)}: "
-          + ", ".join(f"{k} {v:,}" for k, v in followers.items()))
+          + ", ".join(f"{k} {v:,}" for k, v in followers.items())
+          + (f" | still missing: {', '.join(still)}" if still else ""))
+
     posts = run_actor(token, FB_POSTS_ACTOR,
                       {"startUrls": [{"url": u} for u in urls.values()],
                        "resultsLimit": FB_RESULTS_LIMIT}, "Step 2 FB posts")
+    got = {_fb_key(p, urls) for p in posts if p.get("postId")}
+    empty = {k: u for k, u in urls.items() if k not in got and k in followers}
+    if empty:
+        print(f"  no posts from {', '.join(empty)} - retrying once")
+        try:
+            posts += run_actor(token, FB_POSTS_ACTOR,
+                               {"startUrls": [{"url": u} for u in empty.values()],
+                                "resultsLimit": FB_RESULTS_LIMIT}, "Step 2b FB posts retry")
+        except Exception as exc:
+            print(f"  retry failed ({exc})")
     print(f"  scraped {len(posts)} posts (<= {FB_RESULTS_LIMIT}/page)")
     return select(*fb_records(posts, followers, set(urls), today))
 
