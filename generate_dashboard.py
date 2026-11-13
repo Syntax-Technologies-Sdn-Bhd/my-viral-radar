@@ -426,6 +426,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="search"><svg class="ic"><use href="#i-search"/></svg>
       <input id="fSearch" placeholder="搜文案 / hashtag / 账号"></div>
     <select id="fTracker"><option value="">全部 Tracker</option></select>
+    <select id="fPlat"><option value="">全部 Social Media</option></select>
     <select id="fComp"><option value="">全部公司</option></select>
     <select id="fSort">
       <option value="x">按 爆款倍数 (vs 自家平均)</option>
@@ -451,7 +452,7 @@ HTML_TEMPLATE = """<!DOCTYPE html>
     <div class="dgrid" id="dgrid"></div>
   </section>
   <div class="grid" id="grid"></div>
-  <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
+  <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg><span id="emptyMsg">没有符合条件的帖子</span></div>
   <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
 </main>
 <footer>数据来源 Supabase · __SYNC_DAY__自动更新 · 状态更改即时同步全团队 · 视频由 Instagram 官方 embed 播放</footer>
@@ -497,7 +498,9 @@ function toast(msg, ok) {
 const COMPANIES = __COMPANIES__;
 const IG2CO = {};
 COMPANIES.forEach(c => { if (c.instagram) IG2CO[c.instagram.toLowerCase()] = c.name; });
-DATA.forEach(d => { d.co = IG2CO[(d.competitor || '').toLowerCase()] || ''; });
+// every scraped post comes from Instagram today; d.plat keeps the filter honest
+// if another platform's scraper is added later
+DATA.forEach(d => { d.co = IG2CO[(d.competitor || '').toLowerCase()] || ''; d.plat = d.plat || 'instagram'; });
 const PLATS = [
   { k: 'website', label: '官网', cls: 'web' },
   { k: 'facebook', label: 'Facebook', cls: 'fb' },
@@ -519,6 +522,11 @@ if (others.length) {
   others.forEach(h => { const o = document.createElement('option'); o.value = '@' + h; o.textContent = '@' + h + ' · ' + coCount['@' + h]; g.appendChild(o); });
   $('fComp').appendChild(g);
 }
+PLATS.filter(p => p.k !== 'website').forEach(p => {
+  const o = document.createElement('option'); o.value = p.k;
+  o.textContent = p.label + ' · ' + DATA.filter(d => d.plat === p.k).length + ' 帖';
+  $('fPlat').appendChild(o);
+});
 [...new Set(DATA.map(d => d.tracker))].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('fTracker').appendChild(o); });
 
 function matchQ(d) {
@@ -529,8 +537,8 @@ function matchQ(d) {
 function compOf(d) { return d.co || '@' + d.competitor; }
 
 function basePool() {
-  const t = $('fTracker').value, c = $('fComp').value;
-  return DATA.filter(d => (!t || d.tracker === t) && (!c || compOf(d) === c) && (!videoOnly || d.video)
+  const t = $('fTracker').value, c = $('fComp').value, pf = $('fPlat').value;
+  return DATA.filter(d => (!t || d.tracker === t) && (!c || compOf(d) === c) && (!pf || d.plat === pf) && (!videoOnly || d.video)
     && matchQ(d) && PRESETS.every(p => !presetOn[p.k] || p.f(d)));
 }
 
@@ -704,7 +712,12 @@ function renderPlatChips() {
     const el = document.createElement('span');
     el.className = 'chip2' + (curPlat === p.k ? ' on' : '');
     el.textContent = p.label + ' ' + n + (p.k ? '/' + COMPANIES.length : '');
-    el.onclick = () => { curPlat = p.k; renderDir(); };
+    el.onclick = () => {
+      curPlat = p.k;
+      // keep the header dropdown in step (it has no 官网 option)
+      $('fPlat').value = [...$('fPlat').options].some(o => o.value === p.k) ? p.k : '';
+      shown = PAGE; render();
+    };
     box.appendChild(el);
   });
 }
@@ -738,6 +751,10 @@ function render() {
   const grid = $('grid'); grid.innerHTML = '';
   arr.slice(0, shown).forEach((d, i) => grid.appendChild(card(d, i)));
   $('empty').style.display = arr.length ? 'none' : '';
+  const pf = $('fPlat').value, pl = PLATS.find(p => p.k === pf);
+  $('emptyMsg').textContent = pl && !DATA.some(d => d.plat === pf)
+    ? pl.label + ' 的帖子还没接入抓取(目前只抓 Instagram)。上面「竞对名录」列出各公司的 ' + pl.label + ' 主页。'
+    : '没有符合条件的帖子';
   $('moreWrap').style.display = arr.length > shown ? '' : 'none';
 }
 
@@ -776,6 +793,14 @@ async function refreshStatuses() {
 }
 
 ['fTracker','fComp','fSort'].forEach(id => $(id).onchange = () => { shown = PAGE; render(); });
+$('fPlat').onchange = () => {
+  curPlat = $('fPlat').value;
+  // a platform with no scraped posts yet: open the directory so its pages are one click away
+  if (curPlat && !DATA.some(d => d.plat === curPlat) && !$('dir').classList.contains('on')) {
+    $('dir').classList.add('on'); $('fDir').classList.add('on');
+  }
+  shown = PAGE; render();
+};
 $('fSearch').oninput = () => { shown = PAGE; render(); };
 $('fVideo').onclick = () => { videoOnly = !videoOnly; $('fVideo').classList.toggle('on', videoOnly); shown = PAGE; render(); };
 $('moreBtn').onclick = () => { shown += PAGE; render(); };
