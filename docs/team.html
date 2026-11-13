@@ -1,25 +1,451 @@
 <!DOCTYPE html>
-<html lang="zh"><head>
+<html lang="zh">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="refresh" content="60">
-<title>爆款雷达 · 还在加载</title>
+<title>工作台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-       background:#0a0d13;color:#e8e8ea;text-align:center;padding:24px;
-       font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
-  .spin{width:34px;height:34px;margin:0 auto 26px;border:3px solid #2a2f3a;
-        border-top-color:#ff785a;border-radius:50%;animation:s 1s linear infinite}
-  @keyframes s{to{transform:rotate(360deg)}}
-  h1{font-size:23px;margin:0 0 14px;font-weight:600}
-  p{margin:8px 0;color:#9a9aa2;font-size:15px;line-height:1.75}
-  .hint{margin-top:30px;font-size:13.5px;color:#6e6e78}
-  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-</style></head><body><div>
-  <div class="spin"></div>
-  <h1>你的页面还在加载中,请稍等</h1>
-  <p>第一次大约需要 20-60 分钟。</p>
-  <p>这一页会自己刷新,你可以先去忙别的。</p>
-  <p class="hint">等很久都没变?回到安装 SOP 第 7 步,<br>到仓库的 Actions 看 Sync Content 有没有跑完。</p>
-</div></body></html>
+  :root {
+    --bg:#0a0d13; --card:#11151d; --card-hi:#151a24; --border:#1d2430; --border-hi:#2c3546;
+    --text:#e8ecf3; --muted:#8a94a6; --faint:#5b6577; --accent:#5ea1ff; --green:#3fd68f;
+    --orange:#f0a33f; --pink:#ff6b9d; --red:#ff5c5c; --fire1:#ff8a3d; --fire2:#ff4d6d;
+    --font:'Inter',-apple-system,'Segoe UI','PingFang SC','Microsoft YaHei',sans-serif;
+    --disp:'Space Grotesk','Inter','PingFang SC','Microsoft YaHei',sans-serif;
+  }
+  * { box-sizing:border-box; margin:0; padding:0; }
+  body { background:var(--bg); color:var(--text); font-family:var(--font); -webkit-font-smoothing:antialiased; }
+  ::selection { background:rgba(94,161,255,.3); }
+  ::-webkit-scrollbar { width:10px; } ::-webkit-scrollbar-thumb { background:#232c3b; border-radius:8px; }
+  :focus-visible { outline:2px solid var(--accent); outline-offset:2px; border-radius:6px; }
+  .ic { width:14px; height:14px; stroke:currentColor; stroke-width:2; stroke-linecap:round; stroke-linejoin:round; fill:none; flex:none; }
+
+  header { position:sticky; top:0; z-index:50; background:rgba(10,13,19,.86);
+    backdrop-filter:blur(14px); border-bottom:1px solid var(--border); padding:13px 20px; }
+  .hrow { display:flex; flex-wrap:wrap; gap:10px; align-items:center; max-width:1200px; margin:0 auto; }
+  .brand { display:flex; align-items:center; gap:10px; margin-right:auto; }
+  .mark { width:31px; height:31px; border-radius:9px; display:grid; place-items:center;
+    background:linear-gradient(135deg,var(--fire1),var(--fire2)); box-shadow:0 4px 16px rgba(255,92,80,.35); }
+  .mark .ic { width:17px; height:17px; color:#fff; }
+  h1 { font-family:var(--disp); font-size:16.5px; font-weight:700; line-height:1.15; }
+  h1 small { display:block; color:var(--faint); font-family:var(--font); font-weight:400; font-size:10.5px; }
+  .me { display:flex; align-items:center; gap:8px; font-size:13px; color:var(--muted); cursor:pointer;
+    background:var(--card); border:1px solid var(--border); border-radius:10px; padding:7px 12px;
+    transition:border-color .18s; }
+  .me:hover { border-color:var(--border-hi); }
+  .me b { color:var(--text); }
+
+  nav { display:flex; gap:7px; max-width:1200px; margin:12px auto 0; flex-wrap:wrap; }
+  .ntab { display:inline-flex; align-items:center; gap:7px; background:var(--card);
+    border:1px solid var(--border); border-radius:999px; padding:7px 16px; font-size:13.5px;
+    color:var(--muted); cursor:pointer; user-select:none; transition:all .18s; }
+  .ntab:hover { border-color:var(--border-hi); color:var(--text); }
+  .ntab.on { color:var(--text); background:linear-gradient(135deg,rgba(255,138,61,.15),rgba(255,77,109,.15));
+    border-color:rgba(255,120,90,.45); }
+
+  main { max-width:1200px; margin:22px auto; padding:0 20px; }
+  .page { display:none; } .page.on { display:block; }
+
+  .stats { display:flex; gap:10px; flex-wrap:wrap; margin-bottom:18px; }
+  .stat { flex:1; min-width:130px; background:var(--card); border:1px solid var(--border);
+    border-radius:14px; padding:14px 16px; }
+  .stat .v { font-family:var(--disp); font-size:26px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .stat .l { color:var(--faint); font-size:12px; margin-top:2px; }
+  .stat.sh .v { color:var(--orange); } .stat.dn .v { color:var(--green); } .stat.pd .v { color:var(--accent); }
+
+  section { background:var(--card); border:1px solid var(--border); border-radius:16px;
+    padding:16px 18px; margin-bottom:16px; }
+  section h2 { font-size:14px; font-weight:600; display:flex; align-items:center; gap:8px; margin-bottom:12px; }
+  section h2 .ic { color:var(--orange); }
+  section h2 small { color:var(--faint); font-weight:400; font-size:11.5px; margin-left:auto; }
+  .row { display:flex; align-items:center; gap:10px; padding:10px 0; border-top:1px solid var(--border);
+    font-size:13px; flex-wrap:wrap; }
+  .row .hookline { flex:1; min-width:200px; color:var(--text); overflow:hidden; text-overflow:ellipsis;
+    white-space:nowrap; }
+  .row .hookline small { color:var(--faint); display:block; font-size:11px; margin-top:1px; }
+  .row .who2 { color:var(--accent); text-decoration:none; font-weight:600; font-size:12px; white-space:nowrap; }
+  .xb { font-family:var(--disp); font-weight:600; font-size:11px; color:var(--orange);
+    border:1px solid rgba(240,163,63,.4); background:rgba(240,163,63,.07); border-radius:99px;
+    padding:2px 8px; white-space:nowrap; }
+  .pill { display:inline-flex; align-items:center; gap:4px; background:#0c0f16; color:var(--muted);
+    border:1px solid var(--border); border-radius:9px; padding:5.5px 10px; font-size:11.5px;
+    cursor:pointer; text-decoration:none; font-family:var(--font); transition:all .18s; white-space:nowrap; }
+  .pill .ic { width:11px; height:11px; }
+  .pill:hover { color:var(--accent); border-color:rgba(94,161,255,.5); }
+  .pill.ok:hover { color:var(--green); border-color:rgba(63,214,143,.5); }
+  .pill.bad:hover { color:var(--red); border-color:rgba(255,92,92,.5); }
+  .none { color:var(--faint); font-size:13px; padding:14px 0 6px; }
+
+  .act { display:flex; gap:9px; padding:7px 0; border-top:1px solid var(--border);
+    font-size:12.5px; color:var(--muted); }
+  .act time { color:var(--faint); font-variant-numeric:tabular-nums; white-space:nowrap; }
+  .act b { color:var(--text); font-weight:600; }
+  .act .to { color:var(--orange); }
+
+  #radarWrap { height:calc(100vh - 150px); min-height:500px; border:1px solid var(--border);
+    border-radius:16px; overflow:hidden; }
+  #radarWrap iframe { width:100%; height:100%; border:0; }
+
+  .sop { max-width:820px; }
+  .sop h3 { font-size:15px; margin:22px 0 10px; display:flex; gap:8px; align-items:center; }
+  .sop h3 .ic { color:var(--orange); }
+  .sop ol { margin:0 0 8px 22px; color:var(--muted); font-size:13.5px; line-height:1.9; }
+  .sop ol b { color:var(--text); }
+  .sop p { color:var(--muted); font-size:13px; line-height:1.7; margin-bottom:6px; }
+  .sop table { border-collapse:collapse; font-size:13px; margin:8px 0; }
+  .sop td, .sop th { border:1px solid var(--border); padding:7px 14px; color:var(--muted); }
+  .sop th { color:var(--text); background:var(--card-hi); }
+
+  #mission { border:1px solid rgba(255,120,90,.35); border-radius:16px; padding:15px 18px;
+    margin-bottom:14px; background:linear-gradient(135deg,rgba(255,138,61,.10),rgba(255,77,109,.10)); }
+  #mission .mt { font-weight:600; font-size:14px; display:flex; gap:8px; align-items:center; }
+  #mission .mt .ic { color:var(--orange); }
+  #mission .md { color:var(--muted); font-size:12.5px; margin-top:5px; line-height:1.6; }
+  #mission .md b { color:var(--text); font-family:var(--disp); }
+  #overlay { position:fixed; inset:0; background:rgba(6,8,12,.88); backdrop-filter:blur(6px);
+    z-index:200; display:none; place-items:center; }
+  #overlay.show { display:grid; }
+  .obox { background:var(--card); border:1px solid var(--border-hi); border-radius:18px;
+    padding:28px 30px; width:min(92vw,380px); }
+  .obox h2 { font-family:var(--disp); font-size:18px; margin-bottom:6px; }
+  .obox p { color:var(--muted); font-size:13px; margin-bottom:16px; }
+  .obox input, .obox select { width:100%; background:#0c0f16; color:var(--text);
+    border:1px solid var(--border); border-radius:10px; padding:10px 13px; font-size:14px;
+    font-family:var(--font); margin-bottom:11px; }
+  .obox input:focus, .obox select:focus { border-color:var(--accent); outline:none; }
+  .obox button { width:100%; background:linear-gradient(135deg,var(--fire1),var(--fire2));
+    color:#fff; border:0; border-radius:10px; padding:11px; font-size:14px; font-weight:600;
+    font-family:var(--font); cursor:pointer; }
+  .obox button:active { transform:scale(.98); }
+
+  #toast { position:fixed; bottom:26px; left:50%; transform:translateX(-50%) translateY(8px);
+    background:var(--card-hi); border:1px solid var(--border-hi); border-radius:11px;
+    padding:11px 20px; font-size:13px; display:none; z-index:300; opacity:0;
+    box-shadow:0 12px 32px rgba(0,0,0,.5); transition:opacity .2s, transform .2s; }
+  #toast.show { display:block; opacity:1; transform:translateX(-50%) translateY(0); }
+  @media (prefers-reduced-motion: reduce) { * { animation:none!important; transition:none!important; } }
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-user" viewBox="0 0 24 24"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></symbol>
+  <symbol id="i-clock" viewBox="0 0 24 24"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></symbol>
+  <symbol id="i-check" viewBox="0 0 24 24"><path d="M20 6 9 17l-5-5"/></symbol>
+  <symbol id="i-x" viewBox="0 0 24 24"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4Z"/><rect x="2" y="4" width="20" height="16" rx="3"/></symbol>
+  <symbol id="i-book" viewBox="0 0 24 24"><path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/></symbol>
+  <symbol id="i-radar" viewBox="0 0 24 24"><path d="M19.07 4.93A10 10 0 0 0 6.99 3.34"/><path d="M4 6h.01"/><path d="M2.29 9.62A10 10 0 1 0 21.31 8.35"/><path d="M16.24 7.76A6 6 0 1 0 8.23 16.67"/><path d="M12 18h.01"/><path d="M17.99 11.66A6 6 0 0 1 15.77 16.67"/><circle cx="12" cy="12" r="2"/><path d="m13.41 10.59 5.66-5.66"/></symbol>
+  <symbol id="i-arrow" viewBox="0 0 24 24"><path d="M5 12h14"/><path d="m12 5 7 7-7 7"/></symbol>
+</svg>
+<header>
+  <div class="hrow">
+    <div class="brand">
+      <div class="mark"><svg class="ic"><use href="#i-flame"/></svg></div>
+      <h1>工作台<small id="updated"></small></h1>
+    </div>
+    <div class="me" id="meBtn" title="点击修改身份">
+      <svg class="ic"><use href="#i-user"/></svg><span id="meLabel">未登记</span>
+    </div>
+  </div>
+  <nav>
+    <div class="ntab on" data-p="work"><svg class="ic"><use href="#i-clock"/></svg>今日工作</div>
+    <div class="ntab" data-p="radar"><svg class="ic"><use href="#i-radar"/></svg>爆款雷达</div>
+    <div class="ntab" data-p="sop"><svg class="ic"><use href="#i-book"/></svg>SOP</div>
+  </nav>
+</header>
+<main>
+  <div class="page on" id="p-work">
+    <div id="mission"></div>
+    <div class="stats">
+      <div class="stat pd"><div class="v" id="stPending">–</div><div class="l">未处理(待挑选)</div></div>
+      <div class="stat sh"><div class="v" id="stShoot">–</div><div class="l">拍摄中</div></div>
+      <div class="stat dn"><div class="v" id="stDone">–</div><div class="l">已处理</div></div>
+    </div>
+    <section id="secShoot">
+      <h2><svg class="ic"><use href="#i-video"/></svg>拍摄中队列<small>做完一条,点「完成」</small></h2>
+      <div id="shootList"></div>
+    </section>
+    <section id="secPick">
+      <h2><svg class="ic"><use href="#i-flame"/></svg>本周待挑选爆款 Top 8<small>看中就点「选中拍摄」,细看去爆款雷达</small></h2>
+      <div id="pickList"></div>
+    </section>
+  </div>
+  <div class="page" id="p-radar"><div id="radarWrap"></div></div>
+  <div class="page sop" id="p-sop">
+    <section>
+      <h3><svg class="ic"><use href="#i-flame"/></svg>SOP-01 · Marketer 每周选题流程(周一,约30分钟)</h3>
+      <ol>
+        <li>打开<b>爆款雷达</b>,点快筛「<b>真爆款 ×2+</b>」+「<b>近7天</b>」</li>
+        <li>看「爆款热词」确认本周主题方向(热词越多的主题越优先)</li>
+        <li>挑 <b>3–5 条</b>适合改编的。标准:话题跟我们相关 / Hook 可复制 / 我们拍得出来</li>
+        <li>每条点「<b>Brief</b>」复制 → 发到拍摄群</li>
+        <li>把选中的卡片<b>拖到「拍摄中」</b></li>
+        <li>明显不适合的拖「跳过」,保持未处理越少越好</li>
+      </ol>
+    </section>
+    <section>
+      <h3><svg class="ic"><use href="#i-video"/></svg>SOP-02 · Content Creator 拍摄改编流程(每条 ≤1天)</h3>
+      <ol>
+        <li>打开工作台「<b>今日工作</b>」,看拍摄中队列,从最旧的开始</li>
+        <li>打开原帖看 <b>3 遍</b>:第1遍看整体 / 第2遍拆 Hook(前3秒为什么让人停下) / 第3遍记结构(几个镜头、什么节奏)</li>
+        <li><b>改编不照抄</b>:换成我们的案例、口吻、行业。保留结构,替换内容</li>
+        <li>拍摄 → 剪辑。<b>前3秒必须有钩子</b>,字幕开头即出</li>
+        <li>发布后回到工作台,该条点「<b>完成</b>」</li>
+      </ol>
+    </section>
+    <section>
+      <h3><svg class="ic"><use href="#i-book"/></svg>SOP-03 · 状态定义(团队统一语言)</h3>
+      <table>
+        <tr><th>状态</th><th>意思</th><th>谁负责改</th></tr>
+        <tr><td>未处理</td><td>还没人筛选过</td><td>Marketer 每周清理</td></tr>
+        <tr><td>拍摄中</td><td>已选中,正在改编/拍摄/剪辑</td><td>Marketer 选中时拖入</td></tr>
+        <tr><td>已处理</td><td>已发布或已完成改编</td><td>Creator 完成时点</td></tr>
+        <tr><td>跳过</td><td>不适合我们,不再考虑</td><td>任何人</td></tr>
+      </table>
+    </section>
+    <section>
+      <h3><svg class="ic"><use href="#i-radar"/></svg>SOP-04 · 看到「引流」标签的帖子怎么学</h3>
+      <p>带「引流」标的帖子,重点<b>不是内容,是漏斗</b>。记录三件事:</p>
+      <ol>
+        <li>留言<b>关键词</b>是什么?(例:留言「Start」)</li>
+        <li>送的<b>诱饵</b>是什么?(模板 / 课程 / 清单)</li>
+        <li>之后导去<b>哪里</b>?(DM 自动回复 → 链接 → 报名页)</li>
+      </ol>
+      <p>好的打法直接抄结构,用我们的 GHL / ManyChat 实现。</p>
+    </section>
+    <section>
+      <h3><svg class="ic"><use href="#i-user"/></svg>SOP-05 · 竞对名单管理(发现好账号就加进来)</h3>
+      <ol>
+        <li>打开 Supabase「<b>competitors</b>」表,加一行</li>
+        <li><b>Username</b>:贴账号名或 IG <b>主页</b>链接都行(带 ?igsh= 参数没关系;不要贴帖子链接)</li>
+        <li><b>Tracker</b>:选 IG Competitors 或 AI Competitors</li>
+        <li><b>Active</b>:打勾✅ — <b>没勾不会抓</b></li>
+        <li>每周一自动生效;停止追踪 = 取消勾,不用删行</li>
+      </ol>
+      <p>加账号的标准:跟我们领域相关 / 内容有爆款相 / 值得学。发现雷达里某账号长期没爆款,把它 Active 取消,腾出额度换新的。</p>
+    </section>
+    <section>
+      <h3><svg class="ic"><use href="#i-user"/></svg>SOP-06 · 第一次设置 & 常见问题</h3>
+      <ol>
+        <li><b>登记身份:</b>第一次打开工作台会弹「你是谁」→ 输名字、选角色。这决定你看到的任务卡和排版</li>
+        <li><b>直接改状态:</b>雷达里把卡片拖到上方分类,或用卡片下拉选。看到绿色 ✓ 就成了。<b>不需要输任何密钥</b> —— 这套系统天生只允许改状态,改不了别的数据,所以安全无需登录</li>
+      </ol>
+      <p><b>常见问题:</b></p>
+      <table>
+        <tr><th>现象</th><th>原因</th><th>解决</th></tr>
+        <tr><td>改了状态没反应 / 报错</td><td>网络断了,或页面是旧版</td><td>刷新页面(Ctrl+Shift+R)再试</td></tr>
+        <tr><td>队友改的状态我看不到</td><td>页面最多 10 分钟同步一次</td><td>刷新页面即可;自己的改动是即时的</td></tr>
+        <tr><td>网页打不开 / 数据是空的</td><td>每周自动更新那天可能还在跑</td><td>等 1 小时后再开;还不行找老板看 GitHub Actions</td></tr>
+      </table>
+      <p>状态存在云端(Supabase),换电脑、关机都不会丢,全团队实时共享。</p>
+    </section>
+  </div>
+</main>
+<div id="overlay"><div class="obox">
+  <h2>👋 你是谁?</h2>
+  <p>登记一次,方便团队知道是谁在操作。</p>
+  <input id="oName" placeholder="你的名字" maxlength="20">
+  <select id="oRole">
+    <option value="Marketer">Marketer(选题/投放)</option>
+    <option value="Content Creator">Content Creator(拍摄/剪辑)</option>
+    <option value="Boss">Boss</option>
+  </select>
+  <button id="oSave">进入工作台</button>
+</div></div>
+<div id="toast"></div>
+<script id="data" type="application/json">[{"id": "DfZGU5yyEqy", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "KLCC 打人事件？！👀\n\n现场到底发生什么事？快来我们的 Booth 看看吧！😂\n\n除了可以参与有趣的小游戏，还有机会赢取香水！🎮🎁\n\n📍 KLCC Convention Centre, Hall 1\n📅 5–7 November 2026\n🕙 Day 2: 10:00 AM – 6:00 PM\n🕙 Day 3: 10:00 AM – 5:00 PM\n\n游戏和香水都准备好了！就等你来挑战啦！✨\n\n#KLCCTasteAndTrade360  #visitourbooth #eistsql #aibizz", "transcript": "看戰士 ج Ivan搽聲布", "brk": "Hook类型: 悬念/热点吸引\n结构: 制造冲突标题 → 引流展会现场 → 福利诱惑\n为什么火: 用热点事件制造反差悬念，激发好奇心吸引线下流量。\n改编角度: 用“老板查账气晕”等会计痛点悬念，吸引财务同行来展位领福利。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n你是不是以为，有了 e-Invoice 就不用再报税了？\n其实完全不是这样。\n有了 e-Invoice 不等于不用报税，收据也还是需要妥善保存。\n今天跟着 Bryan 一步步设置，用三个方法把公司的账目处理好。\n第一个方法，平时把 Accounting 做好，交易记录保持完整。\n第二个方法，正确处理 e-Invoice，让资料电子化、系统化。\n第三个方法，相关文件妥善保存，这样到了报税的时候，就不用临时手忙脚乱找资料。\n以前开店，忙完顾客还要忙店务，一天结束事情永远做不完。\n用 SQL Accounting 以后，资料记录一次，交易记录保持完整，管理和核对都更容易。\nSQL Accounting Basic with Billing 单用户价格是两千零九十九令吉，加上八个百分点 SST 后是两千二百六十六点九二令吉。\n每个新 Package 包含一次 Session Training，以及一年电话和远程支援还有版本更新。\n需要设置协助或软件咨询？欢迎联系我们。\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "KLCCTasteAndTrade360, visitourbooth, eistsql, aibizz", "bait": false, "type": "Video", "likes": 20, "comments": 0, "er": 3.22, "followers": 621, "date": "2026-11-06", "url": "https://www.instagram.com/p/DfZGU5yyEqy/", "video": true, "ratio": 0, "score": 3.22, "status": "未处理", "x": 1.4}, {"id": "DfW6qjqSVmW", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "看什么看？说的就是你！👀 \n\n别只是看视频啦！快来现场找我们，逛逛我们的 Booth，和我们见面吧！🎉\n\n📍 KLCC Convention Centre, Hall 1\n📅 5–7 November 2026\n🕙 Day 2: 10:00 AM – 6:00 PM\n🕙 Day 3: 10:00 AM – 5:00 PM\n\n我们在现场等你！记得过来打个招呼哦！👋\n\n#KLCCTasteAndTrade360 #visitourbooth #eistsql #aibizz", "transcript": "【发elevator】【文化每会 那】【介绍组電話】【文化加入】【进互咀商店】【干净的姿势】【 hills walkow准备】醜质【造型货习显� what is see the mirror】喂 看什么看看我们的播放【皇上Azile园园】【或是在香港演奏一个人的版本】", "brk": "Hook类型: 痛点直击\n结构: 抓人眼球 → 展会邀请 → 行动呼吁\n为什么火: 用强烈的语气互动打破观看惯性，有效吸引本地展会目标客群。\n改编角度: 针对会计软件，用“还在手动对账？”开场，邀请老板现场体验AI记账。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n\n很多人以为，只要电子发票越来越普及，资料自动记录了，报税就能直接当甩手掌柜，甚至把收据全部丢掉。\n\n其实不是，有了 e-Invoice 并不等于不用报税，相关的税务记录和文件，还是要按照规定妥善保存。\n\n真正让报税变轻松的方法其实很简单。\n\n第一，平时把 Accounting 做好，把日常的每一笔交易资料记录完整，系统化管理。\n\n第二，利用 SQL Accounting 软件把账目处理好，交易记录保持清晰，方便随时核对。\n\n第三，相关的所有单据和文件按照规定时间保存好，到了报税的时候就能从容应对。\n\n以前开店对账总是手忙脚乱，常常为了找一张收据花掉大半天。\n\n用对方法把资料整理好以后，不仅管理和核对变得更轻松，报税时也不用临时手忙脚乱找资料。\n\n如果你想了解 SQL Accounting Basic 或者是 SQL Pro 软件，欢迎私讯我们安排了解。\n\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "KLCCTasteAndTrade360, visitourbooth, eistsql, aibizz", "bait": false, "type": "Video", "likes": 14, "comments": 0, "er": 2.25, "followers": 621, "date": "2026-11-05", "url": "https://www.instagram.com/p/DfW6qjqSVmW/", "video": true, "ratio": 0, "score": 2.25, "status": "未处理", "x": 1.0}, {"id": "DfYwa6UShAP", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "Come visit us at RESONEX 2026! 💜\n\nRunning a retail or F&B business? Drop by the SQL Account × AI Bizz booth and chat with the EIST team about smarter ways to manage your accounting, payroll and daily operations.\n\n📍 Kuala Lumpur Convention Centre (KLCC) \n✨ Hall 1 · Booth 1B01 \n📅 5–7 November 2026 \n🕙 5–6 Nov · 10 AM–6 PM \n🕙 7 Nov · 10 AM–5 PM \n\nRESONEX Retail Solution Expo is co-located with Taste & Trade 360. See you at the booth! 💜\n\n#eistsql #SQLAccEIST #AIBizz #RESONEX2026 #TasteAndTrade360", "transcript": "", "brk": "Hook类型: 身份共鸣\n结构: 展会预告 → 核心痛点 → 展位指引\n为什么火: 精准触达展会周边的零售与餐饮老板，线下引流意图明确。\n改编角度: 结合老板逛展痛点，拍一条“展会现场现场演示30秒出财务报表”的短视频。", "my": "🇲🇾 开了零售店，怎么老板比员工还忙？\n\n开店前，想的是把服务做好。\n开店后，才发现还有一大堆经营问题等着你。\n很多老板以为，生意做大一定要请专门的会计。\n其实不是，只要把日常账目和薪资管理系统化。\n用 SQL Accounting 做好日常账目。\n不用每天面对一堆单据手忙脚乱。\n记录一次资料，以后核对更轻松。\n用 SQL Payroll 管理员工薪资。\n准证到期前设置好提醒。\n及时跟进更新，减少临时手忙脚乱。\n还有 e-Invoice 电子发票模块。\n资料电子化，报税时更容易核对。\n以前开店，常常要自己找收据对资料。\n现在有了系统，交易记录保持完整。\n提前掌握，及时跟进更新。\n需要软件咨询或设置协助。\n欢迎联系我们。", "tags": "eistsql, SQLAccEIST, AIBizz, RESONEX2026, TasteAndTrade360", "bait": false, "type": "Image", "likes": 11, "comments": 0, "er": 1.77, "followers": 621, "date": "2026-11-06", "url": "https://www.instagram.com/p/DfYwa6UShAP/", "video": false, "ratio": 0, "score": 1.77, "status": "未处理", "x": 0.8}, {"id": "Dd8Flh5hFKv", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "Stronger Team. Stronger SQL. 💪✨\nA day filled with teamwork, challenges, laughter, and great memories!\nAt SQL, we believe great teamwork goes beyond the workplace — it’s about connecting, supporting one another, and growing together.\nOne team. One spirit. Moving forward together. 🚀\n#SQL #SQLTeam #TeamBuilding #Teamwork #BetterTogether #CompanyCulture", "transcript": "FRESH FETAL BASS Oh Yes", "brk": "Hook类型: 身份共鸣\n结构: 团队活动展示 → 欢乐瞬间集锦 → 企业文化升华\n为什么火: 展示真实有爱的团队氛围，增强品牌信任感与亲和力\n改编角度: 结合Accounting系统团队，展示加班后的欢乐团建或客服日，突出专业背后的烟火气", "my": "🇲🇾 开了美容院，怎么老板比员工还忙？🥲\n\n开店前，想的是把服务做好。\n开店后，才发现还有一大堆经营问题等着你。\n\n很多老板觉得，生意做大一定要请很多人。\n每天要管员工请假、护照到期、还要算薪水。\n以为只要人手够多，店里就会顺。\n\n其实不是。\n人请得再多，日常管理没有做好，老板还是天天绑在店里。\n\n用 SQL Payroll，资料记录一次，再设好提前提醒，让 HR 跟进更轻松！🔔\n记录护照号码、准证号码及到期日期。\n不用怕员工证件过期被罚款，系统会自动跳出通知。\n\n每个新 SQL Payroll Package，价格是 RM1,599 加 8% SST。\n包含 20 个 staff 的额度，帮 HR 省下很多核对时间。\n提前掌握，及时跟进更新，减少临时手忙脚乱。\n\n以前开店，每天忙完顾客，还要熬夜对账、找收据。\n一整天下来，人很累，事情却好像永远做不完。\n\n现在开始，把日常记录交给 SQL Accounting Software 和 SQL Payroll。\nSQL Accounting Basic with Billing 单用户价格是 RM2,099 加 167.92 的 SST，总共 RM2,266.92。\n包含 1 年电话和远程支援，还有 2 家公司的免费 e-Invoice Module。\n让资料电子化、系统化，老板终于有时间去想怎么把生意做好。\n\n需要设置协助或软件咨询？\n点击主页联系我们，了解更多 SQL 软件详情。", "tags": "SQL, SQLTeam, TeamBuilding, Teamwork, BetterTogether, CompanyCulture", "bait": false, "type": "Video", "likes": 23, "comments": 0, "er": 0.53, "followers": 4361, "date": "2026-10-01", "url": "https://www.instagram.com/p/Dd8Flh5hFKv/", "video": true, "ratio": 0, "score": 0.53, "status": "未处理", "x": 1.9}, {"id": "Ded9WcPBvev", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "SQL用户，你知道这个功能升级了？\n\n😵‍💫做 Accounts 的，每天就是一直 Key In、Key In、Key In！\n\nInvoice、Bill、Receipt 一大堆 📄\n还要一个个 Check、Match Supplier、Key Item、分类 GL Code，之后又要 Double Check…\n\n每天不少时间都花在这些重复的工作上！🥲\nSQL AI Easy Scan 升级啦！\n\n现在 AI 不只是帮你 Scan Document，还可以：\n✅ Auto Match Customer & Supplier Profile\n✅ 自动匹配 Item Code、识别 Quantity & Unit Price\n✅ Smart Category & GL Code Mapping\n✅ Duplicate Checking & Warning Alerts\n\n📲收到文件？Snap & Send via WhatsApp 或直接 Upload！\n减少重复 Manual Key In，让 AI 帮你处理更多繁琐步骤，日常 Accounts 工作更省时、更轻松！\n✨ Snap. Send. Review. Confirm.\n看看升级后的 SQL AI Easy Scan，如何帮你简化日常 Accounts 工作！\nDon’t Key It In. Let AI Easy Scan Handle It.\n\n#马来西亚会计 #会计日常 #会计人的日常 #马来西亚打工人 #办公室日常 #财务工作日常 #AI办公 #SQLAccounting #AIEasyScan", "transcript": "Invoice Bill ReceiptHayment文件做accounts的每天處理的從來不只是一種文件每一張進來都要看任、對、分類、key in再檢查文件一多時間就這樣花在這些重複動作上現在SQL AI Easy Scan全面升級收到文件直接snap and send through WhatsApp或者upload文件進來之後AI不只是把內容scan出來而是會結合系統裡的資料一步一步幫你處理AI Easy Scan會先識別文件上的公司資料然後自動從你現有的SQL Database匹配已經建立好的Customer或Supplier Profile匹配到之後不只可以直接帶出相關的Customer Code或Supplier Code也可以直接帶出對應的T number和BRN number結合接近1.8Million的Company Records讓整個匹配過程更快、更高效你只需要Double Check確認資料對了就可以繼續處理Supplier 用自己的Item CodeAI也可以幫你匹配回系統裡的Item還可以把Supplier Item Description帶到Remark2Quantity和Unit Price也會自動識別減少Manual Adjustment讓文件Entry更快接下來連Category AI也可以根據你設定的資料和GL Code Mapping自動判斷和匹配有新增Category新提一下就可以擔心重複開單AI Easy Scan也會先幫你檢查發現重複資料系統會用黃色Highlight提醒Save 文件的時候還會再談出Warning讓你多一層確認所以現在的SQL AI Easy Scan已經不只是幫你scan一張文件而是從識別匹配 分類 到檢查一步一步幫你把Repetitive Work 剪下來你要做的就是snap send review confirmSQL AI Easy ScanDon't key it inLet AI Easy Scan handle it想讓文件Entry更簡單現在就聯繫我們了解SQL AI Easy Scan吧", "brk": "Hook类型: 痛点直击\n结构: 痛点共鸣 → 功能升级 → 核心展示 → 行动呼吁\n为什么火: 精准戳中会计日常大量重复Key-in的痛点，并用AI全自动匹配功能给出完美解法。\n改编角度: 放大“告别加班”的视觉对比，突出AI防重和秒级对账的高效爽感。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前做 accounts 的，每天上班就是一直 key in、key in、key in。\nInvoice、Bill、Receipt 一大堆，还要一个个 check、match supplier、key item、分类 GL code。\n其实文件一多，时间都花在这些重复动作上。\n现在 SQL AI Easy Scan 升级了。\n收到文件直接 snap and send 通过 WhatsApp，或者直接 upload 文件进来。\nAI 不只是把内容 scan 出来，还会结合系统里的资料一步一步帮你处理。\nAI Easy Scan 会先识别文件上的公司资料。\n然后自动从你现有的 SQL Database 匹配已经建立好的 Customer 或 Supplier Profile。\n匹配到之后，可以直接带出相关 Customer Code 或 Supplier Code。\n也可以直接带出对应的 T number 和 BRN number。\n结合接近 1.8 Million 的 Company Records，让整个匹配过程更快。\n你只需要 double check 确认资料对了就可以继续处理。\nSupplier 用自己的 item code，AI 也可以帮你匹配回系统的 item。\n还可以把 Supplier Item Description 带到 Remark 2。\nQuantity 和 unit price 也会自动识别，减少 manual adjustment。\n接下来连 category，AI 也可以根据你设置的资料和 GL code mapping 自动判断和匹配。\n有新增 category 新提一下就可以。\n担心重复开单？\nAI Easy Scan 会先帮你检查。\n发现重复资料，系统会用黄色 highlight 提醒。\nSave 文件的时候还会再弹出 warning 让你多一层确认。\n所以现在的文件处理，不只是帮你 scan 一张文件。\n而是从识别、匹配、分类到检查，一步一步帮你把 repetitive work 减少。\n以前做 accounts 的，每天下班前还要花时间对资料、整理交易记录，真的很麻烦。\n用 SQL Accounting 之后，资料记录一次，再设好日常处理，让 accounts 跟进更轻松。\n想了解 SQL AI Easy Scan 怎么帮到你的生意，欢迎联系我们了解更多。", "tags": "马来西亚会计, 会计日常, 会计人的日常, 马来西亚打工人, 办公室日常, 财务工作日常, AI办公, SQLAccounting, AIEasyScan", "bait": false, "type": "Video", "likes": 9, "comments": 1, "er": 0.23, "followers": 4361, "date": "2026-10-14", "url": "https://www.instagram.com/p/Ded9WcPBvev/", "video": true, "ratio": 0, "score": 0.28, "status": "未处理", "x": 1.0}, {"id": "Ddnw0h_BmxW", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "A Specialised XBRL Conversion Tool for Auditors & Company Secretaries\nConvert financial statements into XBRL for MBRS filing with a simpler, more efficient workflow.\n\nSQL Audit MBRS Converter is an AI-powered solution designed to reduce the manual work involved in preparing XBRL files.\n\nThe process takes just 3 simple steps:\n📤 Upload. 🔍 Review. 📑 Generate.\n1. Upload Financial Statements\nUpload your financial statements in PDF format.\nThe AI automatically analyses the document, extracts relevant financial information, and populates the required fields.\n2. Review & Complete\nReview the extracted information and complete any fields that could not be identified automatically.\nUse the Eye icon to quickly trace each figure back to its source in the financial statements, making verification faster and easier.\n3. Generate XBRL\nOnce the information has been reviewed and completed, simply click Generate XBRL.\nYour XBRL file is then ready for MBRS submission.\n\nFrom Audited Financial Statements to ", "transcript": "A simple and efficient way to turn financial statements into XBRL. Welcome to SQL Audit MBRS Converter, an AI-powered solution designed to simplify the process of converting financial statements into XBRL format for MBRS filing. With SQL Audit MBRS Converter, the entire process can be completed in just three simple steps. Upload, Review, Generate. Step 1. Upload your financial statements. Simply upload your financial statements in PDF format. Our AI-powered system automatically analyses the document, extracts the relevant information, and populates the required fields. Step 2. Review and Complete. Review the information extracted by the system and complete any fields that could not be identified from the financial statements. The best part is the I icon, which lets you quickly locate and verify the source of any figure in the financial statements. Step 3. Generate XBRL. Once all required information has been completed and verified, simply click Generate XBRL. Your XBRL file is generated and ready for MBRS submission. Now, let's take a closer look at how the SQL Audit MBRS Converter works. First, upload your financial statements in PDF format. Once the document has been uploaded, it will appear under the Workspace tab. There are three statuses available in the workspace. Waiting, the task is pending assignment for extraction. In progress, the extraction process is currently underway. Pending Review, the extraction has been completed and the user can proceed with reviewing the information and completing any fields that could not be identified or extracted. You can also click the I icon to view the financial statement document in full. Select the document to begin the XBRL conversion process. The XBRL conversion interface consists of three main sections. Sidebar, located on the left, contains the various sections required for MBRS filing. It also provides an overview of the completion status, showing the number of completed items, the total number of required items, and the overall completion percentage. Each section is clearly marked according to its completion status. A green tick indicates that the section has been fully completed. A red color word, together with the number of outstanding fields, indicates that additional information is still required. Data Entry Area. The most important area is the Data Entry Area, where users can review the information extracted by the system and complete any fields that could not be identified automatically. Document Preview. The document preview allows users to refer to the original financial statements while reviewing and verifying the extracted information. Several functions are available to assist users during the verification process. The search function allows users to search across all verification tabs, making it easier to locate specific information quickly. Users can also view a complete list of error indicators at a glance, allowing specific fields that require attention to be identified and corrected efficiently. And the best part? The Eye icon. If you ever look at a figure and think, A, where did this information come from? No need to spend time searching for it yourself. Just click the Eye icon. You can quickly trace the information back to its original source in the financial statements, making it easy to verify and cross-check the information. For information that has been entered manually, users can also drag the pin icon from the Data Entry field to the relevant location in the source document for easy reference. The Footnote function allows users to add comments or notes where necessary. The Calculation Breakdown function provides details on how a calculated amount was derived, allowing users to review and understand the calculation. Once all information has been completed and verified, click Mark as complete. The workspace will be locked and the status will be changed to completed. Finally, click Generate XBRL to generate the file for NBRS submission. And that's it! The XBRL file has been successfully generated using SQL Audit NBRS Converter. Now, let's look at the login process. For the first time login, click Sign up and enter your username, email address, and passkey name. Then, click Continue. An OTP will be sent to your registered email address for verification. After completing the verification, proceed to create your passkey. For subsequent logins, simply click Sign in with passkey and select your preferred login method. The system also provides several settings to support a more efficient verification process. These include Auto Save and Live Validation. The first icon is the Auto Save switch. When enabled, any changes made while switching between tabs within a workspace will be saved automatically. The second icon is the Live Validation switch. When enabled, the system will validate user inputs in real time and display an alert whenever an error is detected in the relevant field. With SQL Audit NBRS Converter, the process of converting financ", "brk": "Hook类型: 痛点直击\n结构: 痛点引入 → 三步AI流程演示 → 成果转化与行动号召\n为什么火: 精准锁定审计师与秘书痛点，用AI三步法可视化解决繁琐的MBRS报表转换\n改编角度: 聚焦传统XBRL转档耗时痛点，用“上传-核对-生成”直观展示AI如何帮华人会计省时90%", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n以为报税一定要花很多时间，或者需要找很专业的人来做。\n其实不是，只要平时把 Accounting 做好，整理交易记录保持完整，事情就会简单很多。\n今天带你了解，怎么用 SQL Accounting 把日常交易记录得更清楚。\n第一步，先记录交易。\n平时把每一笔账目输入系统，不要全部堆到报税时才来处理。\n这样到了报税的时候，资料就已经准备好了。\n第二步，核对相关资料。\n使用系统核对交易记录，确认金额和收据都对得上。\n这样可以减少出错的机会，也更容易管理和核对。\n第三步，妥善保存文件。\n相关税务记录和文件，还是要按照规定保存。\n有了 e-Invoice 以后，交易资料会以电子方式记录。\n但要注意，有了 e-Invoice 不等于不用报税，收据也不可以全部丢掉。\n以前报税时，常常要自己一张一张翻收据、对资料。\n用 SQL Accounting 之后，交易记录保持完整，相关文件妥善保存。\n这样到了报税的时候，就不用临时手忙脚乱找资料。\n如果想了解 SQL Accounting Software 的详情，欢迎联系我们。\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "request", "bait": false, "type": "Video", "likes": 8, "comments": 1, "er": 0.21, "followers": 4361, "date": "2026-09-23", "url": "https://www.instagram.com/p/Ddnw0h_BmxW/", "video": true, "ratio": 0, "score": 0.25, "status": "未处理", "x": 0.9}]</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const SUPA = 'https://akfdllsqopkajaqzwvzx.supabase.co';
+const ANON = 'sb_publishable_fe2gcnJROojRMm3HuTRKtA_igfDqNX4';
+document.getElementById('updated').textContent = '数据更新于 2026-11-13 11:42 (GMT+8)';
+
+const $ = id => document.getElementById(id);
+const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
+const esc = s => String(s).replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
+const getKey = () => ANON;  // anon key is baked in — safe, can only change status
+const firstLine = c => ((c || '').split('\n').map(l => l.trim()).filter(Boolean)[0] || '(无文案)');
+const byRec = {}; DATA.forEach(d => byRec[d.id] = d);
+
+function toast(msg, ok) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// ---- mission card ----
+function renderMission() {
+  const role = localStorage.getItem('tm_role') || '';
+  const name = localStorage.getItem('tm_name') || '';
+  const pend = DATA.filter(d => d.status === '未处理').length;
+  const hot = DATA.filter(d => d.status === '未处理' && (d.x || 0) >= 2).length;
+  const queue = DATA.filter(d => d.status === '拍摄中').length;
+  const done = DATA.filter(d => d.status === '已处理').length;
+  const m = $('mission');
+  if (role === 'Marketer') {
+    m.innerHTML = '<div class="mt">' + I('flame') + esc(name) + ',任务:从待挑选里选出值得拍的</div>'
+      + '<div class="md">待挑选 <b>' + pend + '</b> 条(其中真爆款 ×2+ 有 <b>' + hot + '</b> 条)'
+      + ' · 从下面清单直接选,或去雷达细看</div>';
+  } else if (role === 'Content Creator') {
+    m.innerHTML = '<div class="mt">' + I('video') + esc(name) + ',任务:清空拍摄中队列</div>'
+      + '<div class="md">队列还有 <b>' + queue + '</b> 条待做 · 已完成共 <b>' + done + '</b> 条</div>';
+  } else {
+    m.innerHTML = '<div class="mt">' + I('flame') + '团队概览</div>'
+      + '<div class="md">待挑选 <b>' + pend + '</b> 条 · 拍摄中 <b>' + queue + '</b> 条 · 已完成 <b>' + done + '</b> 条</div>';
+  }
+}
+
+function orderSections() {
+  // Marketer sees picks first; Creator sees shooting queue first
+  if ((localStorage.getItem('tm_role') || '') === 'Marketer') {
+    $('secShoot').parentNode.insertBefore($('secPick'), $('secShoot'));
+  } else {
+    $('secPick').parentNode.insertBefore($('secShoot'), $('secPick'));
+  }
+}
+
+// ---- identity ----
+function meLabel() {
+  const n = localStorage.getItem('tm_name'), r = localStorage.getItem('tm_role');
+  $('meLabel').innerHTML = n ? '<b>' + esc(n) + '</b>&nbsp;· ' + esc(r || '') : '未登记';
+}
+function showOverlay() {
+  $('oName').value = localStorage.getItem('tm_name') || '';
+  $('oRole').value = localStorage.getItem('tm_role') || 'Marketer';
+  $('overlay').classList.add('show');
+}
+$('oSave').onclick = () => {
+  const n = $('oName').value.trim();
+  if (!n) { $('oName').focus(); return; }
+  localStorage.setItem('tm_name', n);
+  localStorage.setItem('tm_role', $('oRole').value);
+  $('overlay').classList.remove('show');
+  meLabel(); orderSections(); renderMission();
+  refreshStatuses();
+};
+$('meBtn').onclick = showOverlay;
+meLabel();
+if (!localStorage.getItem('tm_name')) showOverlay();
+
+// ---- tabs ----
+document.querySelectorAll('.ntab').forEach(t => t.onclick = () => {
+  document.querySelectorAll('.ntab').forEach(x => x.classList.toggle('on', x === t));
+  document.querySelectorAll('.page').forEach(p => p.classList.toggle('on', p.id === 'p-' + t.dataset.p));
+  if (t.dataset.p === 'radar' && !$('radarWrap').querySelector('iframe')) {
+    const f = document.createElement('iframe'); f.src = 'index.html'; $('radarWrap').appendChild(f);
+  }
+});
+
+// ---- status write ----
+async function setStatus(d, val) {
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?post_id=eq.' + encodeURIComponent(d.id), {
+      method: 'PATCH',
+      headers: { 'apikey': ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: val })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d.status = val;
+    cacheStatus(d.id, val);
+    toast('✓ @' + d.competitor + ' → ' + val, true);
+  } catch (e) {
+    toast('失败: ' + e.message, false);
+  }
+  renderWork();
+}
+
+// ---- 今日工作 ----
+function pillBtn(cls, icon, label) {
+  return '<button class="pill ' + cls + '">' + I(icon) + label + '</button>';
+}
+
+function renderWork() {
+  const pend = DATA.filter(d => d.status === '未处理');
+  const shoot = DATA.filter(d => d.status === '拍摄中');
+  const done = DATA.filter(d => d.status === '已处理');
+  $('stPending').textContent = pend.length;
+  $('stShoot').textContent = shoot.length;
+  $('stDone').textContent = done.length;
+
+  // shooting queue
+  const sl = $('shootList'); sl.innerHTML = '';
+  if (!shoot.length) sl.innerHTML = '<div class="none">队列是空的 — Marketer 去爆款雷达挑几条拖进「拍摄中」</div>';
+  shoot.forEach(d => {
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+      + ((d.x || 0) >= 2 ? '<span class="xb">×' + d.x + '</span>' : '')
+      + '<span class="hookline">' + esc(firstLine(d.caption)) + '</span>'
+      + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
+      + pillBtn('ok', 'check', '完成') + pillBtn('bad', 'x', '退回');
+    const btns = r.querySelectorAll('button');
+    btns[0].onclick = () => setStatus(d, '已处理');
+    btns[1].onclick = () => setStatus(d, '未处理');
+    sl.appendChild(r);
+  });
+
+  // picks
+  const picks = pend.filter(d => (d.x || 0) >= 2).sort((a, b) => (b.x || 0) - (a.x || 0)).slice(0, 8);
+  const pl = $('pickList'); pl.innerHTML = '';
+  if (!picks.length) pl.innerHTML = '<div class="none">暂时没有 ×2 以上的未处理爆款 — 等周一自动抓新数据</div>';
+  picks.forEach(d => {
+    const r = document.createElement('div'); r.className = 'row';
+    r.innerHTML = '<span class="xb">×' + d.x + '</span>'
+      + '<a class="who2" href="https://www.instagram.com/' + d.competitor + '/" target="_blank">@' + esc(d.competitor) + '</a>'
+      + '<span class="hookline">' + esc(firstLine(d.caption))
+      + '<small>🔥' + d.score + ' · ER ' + d.er + '% · 💬' + fmt(d.comments) + '</small></span>'
+      + '<a class="pill" href="' + d.url + '" target="_blank">' + I('ext') + '原帖</a>'
+      + pillBtn('ok', 'video', '选中拍摄') + pillBtn('bad', 'x', '跳过');
+    const btns = r.querySelectorAll('button');
+    btns[0].onclick = () => setStatus(d, '拍摄中');
+    btns[1].onclick = () => setStatus(d, '跳过');
+    pl.appendChild(r);
+  });
+  renderMission();
+}
+
+function applyStatusCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    Object.keys(c).forEach(rid => { const d = byRec[rid]; if (d) d.status = c[rid]; });
+  } catch (e) {}
+}
+
+function cacheStatus(rid, val) {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    c[rid] = val; localStorage.setItem('st_cache', JSON.stringify(c));
+  } catch (e) {}
+}
+
+// ---- live statuses from Supabase ----
+async function refreshStatuses() {
+  applyStatusCache(); renderWork();  // last-known statuses first
+  if (Date.now() - (+localStorage.getItem('st_ts') || 0) < 600000) return;  // 10-min throttle
+  localStorage.setItem('st_ts', String(Date.now()));
+  const fresh = {};
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?select=post_id,status', { headers: { 'apikey': ANON } });
+    if (!r.ok) return;
+    (await r.json()).forEach(row => {
+      const d = byRec[row.post_id];
+      if (d) d.status = row.status || '未处理';
+      if (row.status && row.status !== '未处理') fresh[row.post_id] = row.status;
+    });
+    localStorage.setItem('st_cache', JSON.stringify(fresh));
+    renderWork();
+  } catch (e) {}
+}
+
+orderSections();
+renderMission();
+renderWork();
+refreshStatuses();
+</script>
+</body>
+</html>

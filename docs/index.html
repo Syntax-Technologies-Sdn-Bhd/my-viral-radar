@@ -1,25 +1,540 @@
 <!DOCTYPE html>
-<html lang="zh"><head>
+<html lang="zh">
+<head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<meta http-equiv="refresh" content="60">
-<title>爆款雷达 · 还在加载</title>
+<title>Accounting System</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
-  body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
-       background:#0a0d13;color:#e8e8ea;text-align:center;padding:24px;
-       font-family:"PingFang SC","Microsoft YaHei",system-ui,sans-serif}
-  .spin{width:34px;height:34px;margin:0 auto 26px;border:3px solid #2a2f3a;
-        border-top-color:#ff785a;border-radius:50%;animation:s 1s linear infinite}
-  @keyframes s{to{transform:rotate(360deg)}}
-  h1{font-size:23px;margin:0 0 14px;font-weight:600}
-  p{margin:8px 0;color:#9a9aa2;font-size:15px;line-height:1.75}
-  .hint{margin-top:30px;font-size:13.5px;color:#6e6e78}
-  @media(prefers-reduced-motion:reduce){.spin{animation:none}}
-</style></head><body><div>
-  <div class="spin"></div>
-  <h1>你的页面还在加载中,请稍等</h1>
-  <p>第一次大约需要 20-60 分钟。</p>
-  <p>这一页会自己刷新,你可以先去忙别的。</p>
-  <p class="hint">等很久都没变?回到安装 SOP 第 7 步,<br>到仓库的 Actions 看 Sync Content 有没有跑完。</p>
-</div></body></html>
+  :root {
+    --bg: #0a0d13;
+    --card: #11151d;
+    --card-hi: #151a24;
+    --border: #1d2430;
+    --border-hi: #2c3546;
+    --text: #e8ecf3;
+    --muted: #8a94a6;
+    --faint: #5b6577;
+    --accent: #5ea1ff;
+    --green: #3fd68f;
+    --orange: #f0a33f;
+    --pink: #ff6b9d;
+    --red: #ff5c5c;
+    --fire1: #ff8a3d;
+    --fire2: #ff4d6d;
+    --font: 'Inter', -apple-system, 'Segoe UI', 'PingFang SC', 'Microsoft YaHei', sans-serif;
+    --disp: 'Space Grotesk', 'Inter', -apple-system, 'PingFang SC', 'Microsoft YaHei', sans-serif;
+  }
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  html { scrollbar-color: #232c3b var(--bg); }
+  body { background: var(--bg); color: var(--text); font-family: var(--font);
+    -webkit-font-smoothing: antialiased; }
+  ::selection { background: rgba(94,161,255,.3); }
+  ::-webkit-scrollbar { width: 10px; height: 10px; }
+  ::-webkit-scrollbar-track { background: var(--bg); }
+  ::-webkit-scrollbar-thumb { background: #232c3b; border-radius: 8px; }
+  ::-webkit-scrollbar-thumb:hover { background: #2c3546; }
+  :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; border-radius: 6px; }
+
+  .ic { width: 14px; height: 14px; stroke: currentColor; stroke-width: 2;
+    stroke-linecap: round; stroke-linejoin: round; fill: none; flex: none; }
+
+  header { position: sticky; top: 0; z-index: 50; background: rgba(10,13,19,.86);
+    backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
+    border-bottom: 1px solid var(--border); padding: 13px 20px 12px; }
+  .hrow { display: flex; flex-wrap: wrap; gap: 9px; align-items: center; max-width: 1440px; margin: 0 auto; }
+  .brand { display: flex; align-items: center; gap: 10px; margin-right: auto; }
+  .mark { width: 31px; height: 31px; border-radius: 9px; display: grid; place-items: center;
+    background: linear-gradient(135deg, var(--fire1), var(--fire2));
+    box-shadow: 0 4px 16px rgba(255,92,80,.35); }
+  .mark .ic { width: 17px; height: 17px; color: #fff; }
+  h1 { font-family: var(--disp); font-size: 16.5px; font-weight: 700; letter-spacing: .2px; white-space: nowrap; line-height: 1.15; }
+  h1 small { display: block; color: var(--faint); font-family: var(--font); font-weight: 400;
+    font-size: 10.5px; letter-spacing: 0; }
+
+  .search { position: relative; }
+  .search > .ic { position: absolute; left: 11px; top: 50%; transform: translateY(-50%);
+    color: var(--faint); width: 13.5px; pointer-events: none; }
+  input#fSearch { background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 12px 8px 32px; font-size: 13px; font-family: var(--font);
+    width: 200px; transition: border-color .18s, background .18s; }
+  input#fSearch:hover { border-color: var(--border-hi); }
+  input#fSearch:focus { border-color: var(--accent); outline: none; }
+  input#fSearch::placeholder { color: var(--faint); }
+
+  select, .btn { background: var(--card); color: var(--text); border: 1px solid var(--border);
+    border-radius: 10px; padding: 8px 11px; font-size: 13px; font-family: var(--font);
+    cursor: pointer; transition: border-color .18s, background .18s, color .18s;
+    display: inline-flex; align-items: center; gap: 6px; }
+  select:hover, .btn:hover { border-color: var(--border-hi); background: var(--card-hi); }
+  .btn:active { transform: scale(.97); }
+  .btn.on { border-color: var(--accent); color: var(--accent); background: rgba(94,161,255,.08); }
+
+  .tabs { display: flex; gap: 7px; flex-wrap: wrap; max-width: 1440px; margin: 12px auto 0; }
+  .tab { display: inline-flex; align-items: center; gap: 7px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 999px; padding: 6.5px 14px;
+    font-size: 13px; color: var(--muted); cursor: pointer; user-select: none;
+    transition: border-color .18s, background .18s, color .18s, transform .18s; }
+  .tab:hover { border-color: var(--border-hi); color: var(--text); }
+  .tab .cnt { font-family: var(--disp); font-weight: 600; font-size: 11px;
+    background: rgba(255,255,255,.06); padding: 1.5px 7.5px; border-radius: 99px;
+    font-variant-numeric: tabular-nums; }
+  .tab.on { color: var(--text);
+    background: linear-gradient(135deg, rgba(255,138,61,.15), rgba(255,77,109,.15));
+    border-color: rgba(255,120,90,.45); }
+  .tab.on .cnt { background: rgba(255,120,90,.25); }
+  body.dragging .tab.droppable { border-style: dashed; border-color: var(--accent); }
+  .tab.over { background: rgba(94,161,255,.22); color: var(--text); transform: scale(1.07); }
+
+  .chips { display: flex; gap: 6px; flex-wrap: wrap; max-width: 1440px; margin: 9px auto 0; align-items: center; }
+  .chips .lbl { font-size: 12px; color: var(--faint); margin-right: 2px; }
+  .chip2 { display: inline-flex; align-items: center; gap: 5.5px; background: var(--card);
+    border: 1px solid var(--border); border-radius: 999px; padding: 4.5px 12px;
+    font-size: 12px; color: var(--muted); cursor: pointer; user-select: none;
+    transition: border-color .18s, color .18s, background .18s;
+    font-variant-numeric: tabular-nums; }
+  .chip2 .ic { width: 12.5px; height: 12.5px; }
+  .chip2:hover { border-color: var(--border-hi); color: var(--text); }
+  .chip2.on { border-color: rgba(240,163,63,.6); color: var(--orange); background: rgba(240,163,63,.08); }
+
+  main { max-width: 1440px; margin: 22px auto; padding: 0 20px; }
+  .grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(305px, 1fr)); gap: 18px; }
+
+  .card { position: relative; background: var(--card); border: 1px solid var(--border);
+    border-radius: 16px; overflow: hidden; display: flex; flex-direction: column;
+    transition: transform .22s cubic-bezier(.2,.7,.3,1), border-color .22s, box-shadow .22s;
+    animation: fadeUp .45s cubic-bezier(.2,.7,.3,1) both; }
+  .card:hover { transform: translateY(-3px); border-color: var(--border-hi);
+    box-shadow: 0 12px 32px rgba(0,0,0,.45); }
+  .card.outlier::before { content: ''; position: absolute; top: 0; left: 0; right: 0; height: 3px;
+    background: linear-gradient(90deg, var(--fire1), var(--fire2)); z-index: 2; }
+  .card[draggable] { cursor: grab; }
+  .card.lifting { opacity: .45; }
+  .card.saved { border-color: var(--green); }
+  @keyframes fadeUp { from { opacity: 0; transform: translateY(10px); } to { opacity: 1; transform: none; } }
+
+  .embed { position: relative; width: 100%; aspect-ratio: 4/5; background: #080b10; }
+  .embed iframe { position: absolute; inset: 0; width: 100%; height: 100%; border: 0; }
+  .embed .ph { position: absolute; inset: 0; display: grid; place-items: center;
+    background: linear-gradient(110deg, #0b0e15 8%, #121826 18%, #0b0e15 33%);
+    background-size: 200% 100%; animation: shimmer 1.5s linear infinite; }
+  .embed .ph .ic { width: 30px; height: 30px; color: #2a3342; stroke-width: 1.6; }
+  @keyframes shimmer { to { background-position-x: -200%; } }
+
+  .meta { padding: 13px 15px 14px; display: flex; flex-direction: column; gap: 9px; }
+  .row1 { display: flex; align-items: center; gap: 7px; font-size: 13px; flex-wrap: wrap; }
+  .handle { color: #3a4456; cursor: grab; display: inline-flex; }
+  .handle .ic { width: 13px; height: 13px; }
+  .who { font-weight: 600; color: var(--accent); text-decoration: none; }
+  .who:hover { text-decoration: underline; }
+  .badge { display: inline-flex; align-items: center; gap: 4px; font-size: 10.5px; font-weight: 500;
+    padding: 2.5px 8px; border-radius: 999px; border: 1px solid var(--border); color: var(--muted); }
+  .badge .ic { width: 10.5px; height: 10.5px; }
+  .badge.bnew { color: var(--pink); border-color: rgba(255,107,157,.45); background: rgba(255,107,157,.07); }
+  .badge.bhorse { color: var(--orange); border-color: rgba(240,163,63,.45); background: rgba(240,163,63,.07); }
+  .badge.bbait { color: var(--accent); border-color: rgba(94,161,255,.4); background: rgba(94,161,255,.07); }
+  .date { margin-left: auto; color: var(--faint); font-size: 11px; font-variant-numeric: tabular-nums; }
+
+  .nums { display: flex; gap: 6px; flex-wrap: wrap; }
+  .num { display: inline-flex; align-items: center; gap: 5px; background: #0c0f16;
+    border: 1px solid var(--border); border-radius: 9px; padding: 5px 9px;
+    font-size: 11px; color: var(--muted); }
+  .num .ic { width: 11.5px; height: 11.5px; }
+  .num b { font-family: var(--disp); color: var(--text); font-size: 12.5px; font-weight: 600;
+    font-variant-numeric: tabular-nums; }
+  .num.hot { border-color: rgba(255,122,77,.35); }
+  .num.hot .ic, .num.hot b { color: #ff7a4d; }
+  .num.x { border-color: rgba(240,163,63,.35); }
+  .num.x .ic, .num.x b { color: var(--orange); }
+  .num.er .ic, .num.er b { color: var(--green); }
+
+  .cap { color: var(--muted); font-size: 12.5px; line-height: 1.55; display: -webkit-box;
+    -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden; cursor: pointer; }
+  .cap.open { -webkit-line-clamp: unset; }
+  .cap b { color: var(--text); font-weight: 600; }
+  .ai { border-left: 2px solid var(--orange); background: rgba(240,163,63,.06);
+    padding: 8px 11px; border-radius: 0 10px 10px 0; font-size: 12px; line-height: 1.65;
+    color: var(--muted); }
+  .ai b { color: var(--orange); font-weight: 600; }
+  .mine { border-left: 2px solid var(--green); background: rgba(63,214,143,.06);
+    padding: 8px 11px; border-radius: 0 10px 10px 0; font-size: 12px; line-height: 1.65;
+    color: var(--muted); cursor: pointer; display: -webkit-box; -webkit-line-clamp: 4;
+    -webkit-box-orient: vertical; overflow: hidden; white-space: pre-wrap; }
+  .mine.open { -webkit-line-clamp: unset; }
+  .mine b { color: var(--green); font-weight: 600; }
+
+  .srow { display: flex; align-items: center; gap: 7px; }
+  .srow label { font-size: 12px; color: var(--faint); }
+  .status { flex: 1; padding: 6px 9px; font-size: 12.5px; }
+  .status.s未处理 { color: var(--muted); }
+  .status.s拍摄中 { color: var(--orange); border-color: rgba(240,163,63,.5); }
+  .status.s已处理 { color: var(--green); border-color: rgba(63,214,143,.5); }
+  .status.s跳过 { color: var(--red); border-color: rgba(255,92,92,.5); }
+  .abtn { display: inline-flex; align-items: center; gap: 5px; background: #0c0f16;
+    color: var(--muted); border: 1px solid var(--border); border-radius: 9px;
+    padding: 6px 10px; font-size: 11.5px; font-family: var(--font); cursor: pointer;
+    text-decoration: none; transition: color .18s, border-color .18s, transform .1s; }
+  .abtn .ic { width: 12px; height: 12px; }
+  .abtn:hover { color: var(--accent); border-color: rgba(94,161,255,.5); }
+  .abtn:active { transform: scale(.95); }
+
+  .more { text-align: center; margin: 28px 0 44px; }
+  .more button { background: var(--card); color: var(--accent); border: 1px solid var(--border);
+    border-radius: 12px; padding: 11px 30px; font-size: 14px; font-family: var(--font);
+    cursor: pointer; transition: border-color .18s, background .18s; }
+  .more button:hover { border-color: var(--border-hi); background: var(--card-hi); }
+
+  .empty { color: var(--faint); text-align: center; padding: 70px 0; display: flex;
+    flex-direction: column; align-items: center; gap: 12px; font-size: 14px; }
+  .empty .ic { width: 34px; height: 34px; stroke-width: 1.5; color: #2c3546; }
+
+  footer { color: var(--faint); font-size: 11px; text-align: center; padding: 22px; }
+
+  #toast { position: fixed; bottom: 26px; left: 50%; transform: translateX(-50%) translateY(8px);
+    background: var(--card-hi); border: 1px solid var(--border-hi); border-radius: 11px;
+    padding: 11px 20px; font-size: 13px; display: none; z-index: 99; opacity: 0;
+    box-shadow: 0 12px 32px rgba(0,0,0,.5); transition: opacity .2s, transform .2s; }
+  #toast.show { display: block; opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  @media (prefers-reduced-motion: reduce) {
+    * { animation: none !important; transition: none !important; }
+  }
+</style>
+</head>
+<body>
+<svg style="display:none" xmlns="http://www.w3.org/2000/svg">
+  <symbol id="i-flame" viewBox="0 0 24 24"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></symbol>
+  <symbol id="i-search" viewBox="0 0 24 24"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></symbol>
+  <symbol id="i-heart" viewBox="0 0 24 24"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.29 1.51 4.04 3 5.5l7 7Z"/></symbol>
+  <symbol id="i-msg" viewBox="0 0 24 24"><path d="M7.9 20A9 9 0 1 0 4 16.1L2 22Z"/></symbol>
+  <symbol id="i-users" viewBox="0 0 24 24"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></symbol>
+  <symbol id="i-trend" viewBox="0 0 24 24"><path d="M22 7l-8.5 8.5-5-5L2 17"/><path d="M16 7h6v6"/></symbol>
+  <symbol id="i-zap" viewBox="0 0 24 24"><path d="M13 2 3 14h9l-1 8 10-12h-9l1-8z"/></symbol>
+  <symbol id="i-star" viewBox="0 0 24 24"><path d="M12 2l2.9 6.9 7.1.6-5.4 4.7 1.6 7-6.2-3.7-6.2 3.7 1.6-7L2 9.5l7.1-.6z"/></symbol>
+  <symbol id="i-magnet" viewBox="0 0 24 24"><path d="m6 15-4-4 6.75-6.77a7.79 7.79 0 0 1 11 11L13 22l-4-4 6.39-6.36a2.14 2.14 0 0 0-3-3L6 15"/><path d="m5 8 4 4"/><path d="m12 15 4 4"/></symbol>
+  <symbol id="i-copy" viewBox="0 0 24 24"><rect x="9" y="9" width="13" height="13" rx="2"/><path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/></symbol>
+  <symbol id="i-clip" viewBox="0 0 24 24"><rect x="8" y="2" width="8" height="4" rx="1"/><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><path d="M9 12h6"/><path d="M9 16h6"/></symbol>
+  <symbol id="i-ext" viewBox="0 0 24 24"><path d="M15 3h6v6"/><path d="M10 14 21 3"/><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/></symbol>
+  <symbol id="i-key" viewBox="0 0 24 24"><circle cx="7.5" cy="15.5" r="5.5"/><path d="m21 2-9.6 9.6"/><path d="m15.5 7.5 3 3L22 7l-3-3"/></symbol>
+  <symbol id="i-video" viewBox="0 0 24 24"><path d="m10 8 6 4-6 4Z"/><rect x="2" y="4" width="20" height="16" rx="3"/></symbol>
+  <symbol id="i-image" viewBox="0 0 24 24"><rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-5-5L5 21"/></symbol>
+  <symbol id="i-layers" viewBox="0 0 24 24"><path d="M12 2 2 7l10 5 10-5-10-5z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></symbol>
+  <symbol id="i-grip" viewBox="0 0 24 24"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></symbol>
+  <symbol id="i-pct" viewBox="0 0 24 24"><path d="M19 5 5 19"/><circle cx="6.5" cy="6.5" r="2.5"/><circle cx="17.5" cy="17.5" r="2.5"/></symbol>
+  <symbol id="i-mic" viewBox="0 0 24 24"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><path d="M12 19v3"/></symbol>
+</svg>
+<header>
+  <div class="hrow">
+    <div class="brand">
+      <div class="mark"><svg class="ic"><use href="#i-flame"/></svg></div>
+      <h1>Accounting System<small id="updated"></small></h1>
+    </div>
+    <div class="search"><svg class="ic"><use href="#i-search"/></svg>
+      <input id="fSearch" placeholder="搜文案 / hashtag / 账号"></div>
+    <select id="fTracker"><option value="">全部 Tracker</option></select>
+    <select id="fComp"><option value="">全部 Competitor</option></select>
+    <select id="fSort">
+      <option value="x">按 爆款倍数 (vs 自家平均)</option>
+      <option value="score">按 Viral Score</option>
+      <option value="er">按 Engagement Rate</option>
+      <option value="comments">按 Comments</option>
+      <option value="likes">按 Likes</option>
+      <option value="date">按 最新日期</option>
+    </select>
+    <button class="btn" id="fVideo"><svg class="ic"><use href="#i-video"/></svg>只看视频</button>
+
+    <a class="btn" href="team.html" target="_top" title="工作台"><svg class="ic"><use href="#i-users"/></svg>工作台</a>
+  </div>
+  <div class="tabs" id="tabs"></div>
+  <div class="chips" id="presets"></div>
+  <div class="chips" id="trends"></div>
+</header>
+<main>
+  <div class="grid" id="grid"></div>
+  <div class="empty" id="empty" style="display:none"><svg class="ic"><use href="#i-search"/></svg>没有符合条件的帖子</div>
+  <div class="more" id="moreWrap" style="display:none"><button id="moreBtn">载入更多</button></div>
+</main>
+<footer>数据来源 Supabase · 每周自动更新 · 状态更改即时同步全团队 · 视频由 Instagram 官方 embed 播放</footer>
+<div id="toast"></div>
+<script id="data" type="application/json">[{"id": "DfZGU5yyEqy", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "KLCC 打人事件？！👀\n\n现场到底发生什么事？快来我们的 Booth 看看吧！😂\n\n除了可以参与有趣的小游戏，还有机会赢取香水！🎮🎁\n\n📍 KLCC Convention Centre, Hall 1\n📅 5–7 November 2026\n🕙 Day 2: 10:00 AM – 6:00 PM\n🕙 Day 3: 10:00 AM – 5:00 PM\n\n游戏和香水都准备好了！就等你来挑战啦！✨\n\n#KLCCTasteAndTrade360  #visitourbooth #eistsql #aibizz", "transcript": "看戰士 ج Ivan搽聲布", "brk": "Hook类型: 悬念/热点吸引\n结构: 制造冲突标题 → 引流展会现场 → 福利诱惑\n为什么火: 用热点事件制造反差悬念，激发好奇心吸引线下流量。\n改编角度: 用“老板查账气晕”等会计痛点悬念，吸引财务同行来展位领福利。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n你是不是以为，有了 e-Invoice 就不用再报税了？\n其实完全不是这样。\n有了 e-Invoice 不等于不用报税，收据也还是需要妥善保存。\n今天跟着 Bryan 一步步设置，用三个方法把公司的账目处理好。\n第一个方法，平时把 Accounting 做好，交易记录保持完整。\n第二个方法，正确处理 e-Invoice，让资料电子化、系统化。\n第三个方法，相关文件妥善保存，这样到了报税的时候，就不用临时手忙脚乱找资料。\n以前开店，忙完顾客还要忙店务，一天结束事情永远做不完。\n用 SQL Accounting 以后，资料记录一次，交易记录保持完整，管理和核对都更容易。\nSQL Accounting Basic with Billing 单用户价格是两千零九十九令吉，加上八个百分点 SST 后是两千二百六十六点九二令吉。\n每个新 Package 包含一次 Session Training，以及一年电话和远程支援还有版本更新。\n需要设置协助或软件咨询？欢迎联系我们。\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "KLCCTasteAndTrade360, visitourbooth, eistsql, aibizz", "bait": false, "type": "Video", "likes": 20, "comments": 0, "er": 3.22, "followers": 621, "date": "2026-11-06", "url": "https://www.instagram.com/p/DfZGU5yyEqy/", "video": true, "ratio": 0, "score": 3.22, "status": "未处理", "x": 1.4}, {"id": "DfW6qjqSVmW", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "看什么看？说的就是你！👀 \n\n别只是看视频啦！快来现场找我们，逛逛我们的 Booth，和我们见面吧！🎉\n\n📍 KLCC Convention Centre, Hall 1\n📅 5–7 November 2026\n🕙 Day 2: 10:00 AM – 6:00 PM\n🕙 Day 3: 10:00 AM – 5:00 PM\n\n我们在现场等你！记得过来打个招呼哦！👋\n\n#KLCCTasteAndTrade360 #visitourbooth #eistsql #aibizz", "transcript": "【发elevator】【文化每会 那】【介绍组電話】【文化加入】【进互咀商店】【干净的姿势】【 hills walkow准备】醜质【造型货习显� what is see the mirror】喂 看什么看看我们的播放【皇上Azile园园】【或是在香港演奏一个人的版本】", "brk": "Hook类型: 痛点直击\n结构: 抓人眼球 → 展会邀请 → 行动呼吁\n为什么火: 用强烈的语气互动打破观看惯性，有效吸引本地展会目标客群。\n改编角度: 针对会计软件，用“还在手动对账？”开场，邀请老板现场体验AI记账。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n\n很多人以为，只要电子发票越来越普及，资料自动记录了，报税就能直接当甩手掌柜，甚至把收据全部丢掉。\n\n其实不是，有了 e-Invoice 并不等于不用报税，相关的税务记录和文件，还是要按照规定妥善保存。\n\n真正让报税变轻松的方法其实很简单。\n\n第一，平时把 Accounting 做好，把日常的每一笔交易资料记录完整，系统化管理。\n\n第二，利用 SQL Accounting 软件把账目处理好，交易记录保持清晰，方便随时核对。\n\n第三，相关的所有单据和文件按照规定时间保存好，到了报税的时候就能从容应对。\n\n以前开店对账总是手忙脚乱，常常为了找一张收据花掉大半天。\n\n用对方法把资料整理好以后，不仅管理和核对变得更轻松，报税时也不用临时手忙脚乱找资料。\n\n如果你想了解 SQL Accounting Basic 或者是 SQL Pro 软件，欢迎私讯我们安排了解。\n\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "KLCCTasteAndTrade360, visitourbooth, eistsql, aibizz", "bait": false, "type": "Video", "likes": 14, "comments": 0, "er": 2.25, "followers": 621, "date": "2026-11-05", "url": "https://www.instagram.com/p/DfW6qjqSVmW/", "video": true, "ratio": 0, "score": 2.25, "status": "未处理", "x": 1.0}, {"id": "DfYwa6UShAP", "tracker": "Accounting System 竞对", "competitor": "sqlaccount_eist", "caption": "Come visit us at RESONEX 2026! 💜\n\nRunning a retail or F&B business? Drop by the SQL Account × AI Bizz booth and chat with the EIST team about smarter ways to manage your accounting, payroll and daily operations.\n\n📍 Kuala Lumpur Convention Centre (KLCC) \n✨ Hall 1 · Booth 1B01 \n📅 5–7 November 2026 \n🕙 5–6 Nov · 10 AM–6 PM \n🕙 7 Nov · 10 AM–5 PM \n\nRESONEX Retail Solution Expo is co-located with Taste & Trade 360. See you at the booth! 💜\n\n#eistsql #SQLAccEIST #AIBizz #RESONEX2026 #TasteAndTrade360", "transcript": "", "brk": "Hook类型: 身份共鸣\n结构: 展会预告 → 核心痛点 → 展位指引\n为什么火: 精准触达展会周边的零售与餐饮老板，线下引流意图明确。\n改编角度: 结合老板逛展痛点，拍一条“展会现场现场演示30秒出财务报表”的短视频。", "my": "🇲🇾 开了零售店，怎么老板比员工还忙？\n\n开店前，想的是把服务做好。\n开店后，才发现还有一大堆经营问题等着你。\n很多老板以为，生意做大一定要请专门的会计。\n其实不是，只要把日常账目和薪资管理系统化。\n用 SQL Accounting 做好日常账目。\n不用每天面对一堆单据手忙脚乱。\n记录一次资料，以后核对更轻松。\n用 SQL Payroll 管理员工薪资。\n准证到期前设置好提醒。\n及时跟进更新，减少临时手忙脚乱。\n还有 e-Invoice 电子发票模块。\n资料电子化，报税时更容易核对。\n以前开店，常常要自己找收据对资料。\n现在有了系统，交易记录保持完整。\n提前掌握，及时跟进更新。\n需要软件咨询或设置协助。\n欢迎联系我们。", "tags": "eistsql, SQLAccEIST, AIBizz, RESONEX2026, TasteAndTrade360", "bait": false, "type": "Image", "likes": 11, "comments": 0, "er": 1.77, "followers": 621, "date": "2026-11-06", "url": "https://www.instagram.com/p/DfYwa6UShAP/", "video": false, "ratio": 0, "score": 1.77, "status": "未处理", "x": 0.8}, {"id": "Dd8Flh5hFKv", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "Stronger Team. Stronger SQL. 💪✨\nA day filled with teamwork, challenges, laughter, and great memories!\nAt SQL, we believe great teamwork goes beyond the workplace — it’s about connecting, supporting one another, and growing together.\nOne team. One spirit. Moving forward together. 🚀\n#SQL #SQLTeam #TeamBuilding #Teamwork #BetterTogether #CompanyCulture", "transcript": "FRESH FETAL BASS Oh Yes", "brk": "Hook类型: 身份共鸣\n结构: 团队活动展示 → 欢乐瞬间集锦 → 企业文化升华\n为什么火: 展示真实有爱的团队氛围，增强品牌信任感与亲和力\n改编角度: 结合Accounting系统团队，展示加班后的欢乐团建或客服日，突出专业背后的烟火气", "my": "🇲🇾 开了美容院，怎么老板比员工还忙？🥲\n\n开店前，想的是把服务做好。\n开店后，才发现还有一大堆经营问题等着你。\n\n很多老板觉得，生意做大一定要请很多人。\n每天要管员工请假、护照到期、还要算薪水。\n以为只要人手够多，店里就会顺。\n\n其实不是。\n人请得再多，日常管理没有做好，老板还是天天绑在店里。\n\n用 SQL Payroll，资料记录一次，再设好提前提醒，让 HR 跟进更轻松！🔔\n记录护照号码、准证号码及到期日期。\n不用怕员工证件过期被罚款，系统会自动跳出通知。\n\n每个新 SQL Payroll Package，价格是 RM1,599 加 8% SST。\n包含 20 个 staff 的额度，帮 HR 省下很多核对时间。\n提前掌握，及时跟进更新，减少临时手忙脚乱。\n\n以前开店，每天忙完顾客，还要熬夜对账、找收据。\n一整天下来，人很累，事情却好像永远做不完。\n\n现在开始，把日常记录交给 SQL Accounting Software 和 SQL Payroll。\nSQL Accounting Basic with Billing 单用户价格是 RM2,099 加 167.92 的 SST，总共 RM2,266.92。\n包含 1 年电话和远程支援，还有 2 家公司的免费 e-Invoice Module。\n让资料电子化、系统化，老板终于有时间去想怎么把生意做好。\n\n需要设置协助或软件咨询？\n点击主页联系我们，了解更多 SQL 软件详情。", "tags": "SQL, SQLTeam, TeamBuilding, Teamwork, BetterTogether, CompanyCulture", "bait": false, "type": "Video", "likes": 23, "comments": 0, "er": 0.53, "followers": 4361, "date": "2026-10-01", "url": "https://www.instagram.com/p/Dd8Flh5hFKv/", "video": true, "ratio": 0, "score": 0.53, "status": "未处理", "x": 1.9}, {"id": "Ded9WcPBvev", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "SQL用户，你知道这个功能升级了？\n\n😵‍💫做 Accounts 的，每天就是一直 Key In、Key In、Key In！\n\nInvoice、Bill、Receipt 一大堆 📄\n还要一个个 Check、Match Supplier、Key Item、分类 GL Code，之后又要 Double Check…\n\n每天不少时间都花在这些重复的工作上！🥲\nSQL AI Easy Scan 升级啦！\n\n现在 AI 不只是帮你 Scan Document，还可以：\n✅ Auto Match Customer & Supplier Profile\n✅ 自动匹配 Item Code、识别 Quantity & Unit Price\n✅ Smart Category & GL Code Mapping\n✅ Duplicate Checking & Warning Alerts\n\n📲收到文件？Snap & Send via WhatsApp 或直接 Upload！\n减少重复 Manual Key In，让 AI 帮你处理更多繁琐步骤，日常 Accounts 工作更省时、更轻松！\n✨ Snap. Send. Review. Confirm.\n看看升级后的 SQL AI Easy Scan，如何帮你简化日常 Accounts 工作！\nDon’t Key It In. Let AI Easy Scan Handle It.\n\n#马来西亚会计 #会计日常 #会计人的日常 #马来西亚打工人 #办公室日常 #财务工作日常 #AI办公 #SQLAccounting #AIEasyScan", "transcript": "Invoice Bill ReceiptHayment文件做accounts的每天處理的從來不只是一種文件每一張進來都要看任、對、分類、key in再檢查文件一多時間就這樣花在這些重複動作上現在SQL AI Easy Scan全面升級收到文件直接snap and send through WhatsApp或者upload文件進來之後AI不只是把內容scan出來而是會結合系統裡的資料一步一步幫你處理AI Easy Scan會先識別文件上的公司資料然後自動從你現有的SQL Database匹配已經建立好的Customer或Supplier Profile匹配到之後不只可以直接帶出相關的Customer Code或Supplier Code也可以直接帶出對應的T number和BRN number結合接近1.8Million的Company Records讓整個匹配過程更快、更高效你只需要Double Check確認資料對了就可以繼續處理Supplier 用自己的Item CodeAI也可以幫你匹配回系統裡的Item還可以把Supplier Item Description帶到Remark2Quantity和Unit Price也會自動識別減少Manual Adjustment讓文件Entry更快接下來連Category AI也可以根據你設定的資料和GL Code Mapping自動判斷和匹配有新增Category新提一下就可以擔心重複開單AI Easy Scan也會先幫你檢查發現重複資料系統會用黃色Highlight提醒Save 文件的時候還會再談出Warning讓你多一層確認所以現在的SQL AI Easy Scan已經不只是幫你scan一張文件而是從識別匹配 分類 到檢查一步一步幫你把Repetitive Work 剪下來你要做的就是snap send review confirmSQL AI Easy ScanDon't key it inLet AI Easy Scan handle it想讓文件Entry更簡單現在就聯繫我們了解SQL AI Easy Scan吧", "brk": "Hook类型: 痛点直击\n结构: 痛点共鸣 → 功能升级 → 核心展示 → 行动呼吁\n为什么火: 精准戳中会计日常大量重复Key-in的痛点，并用AI全自动匹配功能给出完美解法。\n改编角度: 放大“告别加班”的视觉对比，突出AI防重和秒级对账的高效爽感。", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前做 accounts 的，每天上班就是一直 key in、key in、key in。\nInvoice、Bill、Receipt 一大堆，还要一个个 check、match supplier、key item、分类 GL code。\n其实文件一多，时间都花在这些重复动作上。\n现在 SQL AI Easy Scan 升级了。\n收到文件直接 snap and send 通过 WhatsApp，或者直接 upload 文件进来。\nAI 不只是把内容 scan 出来，还会结合系统里的资料一步一步帮你处理。\nAI Easy Scan 会先识别文件上的公司资料。\n然后自动从你现有的 SQL Database 匹配已经建立好的 Customer 或 Supplier Profile。\n匹配到之后，可以直接带出相关 Customer Code 或 Supplier Code。\n也可以直接带出对应的 T number 和 BRN number。\n结合接近 1.8 Million 的 Company Records，让整个匹配过程更快。\n你只需要 double check 确认资料对了就可以继续处理。\nSupplier 用自己的 item code，AI 也可以帮你匹配回系统的 item。\n还可以把 Supplier Item Description 带到 Remark 2。\nQuantity 和 unit price 也会自动识别，减少 manual adjustment。\n接下来连 category，AI 也可以根据你设置的资料和 GL code mapping 自动判断和匹配。\n有新增 category 新提一下就可以。\n担心重复开单？\nAI Easy Scan 会先帮你检查。\n发现重复资料，系统会用黄色 highlight 提醒。\nSave 文件的时候还会再弹出 warning 让你多一层确认。\n所以现在的文件处理，不只是帮你 scan 一张文件。\n而是从识别、匹配、分类到检查，一步一步帮你把 repetitive work 减少。\n以前做 accounts 的，每天下班前还要花时间对资料、整理交易记录，真的很麻烦。\n用 SQL Accounting 之后，资料记录一次，再设好日常处理，让 accounts 跟进更轻松。\n想了解 SQL AI Easy Scan 怎么帮到你的生意，欢迎联系我们了解更多。", "tags": "马来西亚会计, 会计日常, 会计人的日常, 马来西亚打工人, 办公室日常, 财务工作日常, AI办公, SQLAccounting, AIEasyScan", "bait": false, "type": "Video", "likes": 9, "comments": 1, "er": 0.23, "followers": 4361, "date": "2026-10-14", "url": "https://www.instagram.com/p/Ded9WcPBvev/", "video": true, "ratio": 0, "score": 0.28, "status": "未处理", "x": 1.0}, {"id": "Ddnw0h_BmxW", "tracker": "Accounting System 竞对", "competitor": "sqlestream", "caption": "A Specialised XBRL Conversion Tool for Auditors & Company Secretaries\nConvert financial statements into XBRL for MBRS filing with a simpler, more efficient workflow.\n\nSQL Audit MBRS Converter is an AI-powered solution designed to reduce the manual work involved in preparing XBRL files.\n\nThe process takes just 3 simple steps:\n📤 Upload. 🔍 Review. 📑 Generate.\n1. Upload Financial Statements\nUpload your financial statements in PDF format.\nThe AI automatically analyses the document, extracts relevant financial information, and populates the required fields.\n2. Review & Complete\nReview the extracted information and complete any fields that could not be identified automatically.\nUse the Eye icon to quickly trace each figure back to its source in the financial statements, making verification faster and easier.\n3. Generate XBRL\nOnce the information has been reviewed and completed, simply click Generate XBRL.\nYour XBRL file is then ready for MBRS submission.\n\nFrom Audited Financial Statements to ", "transcript": "A simple and efficient way to turn financial statements into XBRL. Welcome to SQL Audit MBRS Converter, an AI-powered solution designed to simplify the process of converting financial statements into XBRL format for MBRS filing. With SQL Audit MBRS Converter, the entire process can be completed in just three simple steps. Upload, Review, Generate. Step 1. Upload your financial statements. Simply upload your financial statements in PDF format. Our AI-powered system automatically analyses the document, extracts the relevant information, and populates the required fields. Step 2. Review and Complete. Review the information extracted by the system and complete any fields that could not be identified from the financial statements. The best part is the I icon, which lets you quickly locate and verify the source of any figure in the financial statements. Step 3. Generate XBRL. Once all required information has been completed and verified, simply click Generate XBRL. Your XBRL file is generated and ready for MBRS submission. Now, let's take a closer look at how the SQL Audit MBRS Converter works. First, upload your financial statements in PDF format. Once the document has been uploaded, it will appear under the Workspace tab. There are three statuses available in the workspace. Waiting, the task is pending assignment for extraction. In progress, the extraction process is currently underway. Pending Review, the extraction has been completed and the user can proceed with reviewing the information and completing any fields that could not be identified or extracted. You can also click the I icon to view the financial statement document in full. Select the document to begin the XBRL conversion process. The XBRL conversion interface consists of three main sections. Sidebar, located on the left, contains the various sections required for MBRS filing. It also provides an overview of the completion status, showing the number of completed items, the total number of required items, and the overall completion percentage. Each section is clearly marked according to its completion status. A green tick indicates that the section has been fully completed. A red color word, together with the number of outstanding fields, indicates that additional information is still required. Data Entry Area. The most important area is the Data Entry Area, where users can review the information extracted by the system and complete any fields that could not be identified automatically. Document Preview. The document preview allows users to refer to the original financial statements while reviewing and verifying the extracted information. Several functions are available to assist users during the verification process. The search function allows users to search across all verification tabs, making it easier to locate specific information quickly. Users can also view a complete list of error indicators at a glance, allowing specific fields that require attention to be identified and corrected efficiently. And the best part? The Eye icon. If you ever look at a figure and think, A, where did this information come from? No need to spend time searching for it yourself. Just click the Eye icon. You can quickly trace the information back to its original source in the financial statements, making it easy to verify and cross-check the information. For information that has been entered manually, users can also drag the pin icon from the Data Entry field to the relevant location in the source document for easy reference. The Footnote function allows users to add comments or notes where necessary. The Calculation Breakdown function provides details on how a calculated amount was derived, allowing users to review and understand the calculation. Once all information has been completed and verified, click Mark as complete. The workspace will be locked and the status will be changed to completed. Finally, click Generate XBRL to generate the file for NBRS submission. And that's it! The XBRL file has been successfully generated using SQL Audit NBRS Converter. Now, let's look at the login process. For the first time login, click Sign up and enter your username, email address, and passkey name. Then, click Continue. An OTP will be sent to your registered email address for verification. After completing the verification, proceed to create your passkey. For subsequent logins, simply click Sign in with passkey and select your preferred login method. The system also provides several settings to support a more efficient verification process. These include Auto Save and Live Validation. The first icon is the Auto Save switch. When enabled, any changes made while switching between tabs within a workspace will be saved automatically. The second icon is the Live Validation switch. When enabled, the system will validate user inputs in real time and display an alert whenever an error is detected in the relevant field. With SQL Audit NBRS Converter, the process of converting financ", "brk": "Hook类型: 痛点直击\n结构: 痛点引入 → 三步AI流程演示 → 成果转化与行动号召\n为什么火: 精准锁定审计师与秘书痛点，用AI三步法可视化解决繁琐的MBRS报表转换\n改编角度: 聚焦传统XBRL转档耗时痛点，用“上传-核对-生成”直观展示AI如何帮华人会计省时90%", "my": "🇲🇾 报税的时候，还在翻一大堆收据？\n以前报税，常常要自己找收据、对资料、整理交易记录，真的很麻烦。\n以为报税一定要花很多时间，或者需要找很专业的人来做。\n其实不是，只要平时把 Accounting 做好，整理交易记录保持完整，事情就会简单很多。\n今天带你了解，怎么用 SQL Accounting 把日常交易记录得更清楚。\n第一步，先记录交易。\n平时把每一笔账目输入系统，不要全部堆到报税时才来处理。\n这样到了报税的时候，资料就已经准备好了。\n第二步，核对相关资料。\n使用系统核对交易记录，确认金额和收据都对得上。\n这样可以减少出错的机会，也更容易管理和核对。\n第三步，妥善保存文件。\n相关税务记录和文件，还是要按照规定保存。\n有了 e-Invoice 以后，交易资料会以电子方式记录。\n但要注意，有了 e-Invoice 不等于不用报税，收据也不可以全部丢掉。\n以前报税时，常常要自己一张一张翻收据、对资料。\n用 SQL Accounting 之后，交易记录保持完整，相关文件妥善保存。\n这样到了报税的时候，就不用临时手忙脚乱找资料。\n如果想了解 SQL Accounting Software 的详情，欢迎联系我们。\n提前掌握，及时跟进更新，减少临时手忙脚乱！", "tags": "request", "bait": false, "type": "Video", "likes": 8, "comments": 1, "er": 0.21, "followers": 4361, "date": "2026-09-23", "url": "https://www.instagram.com/p/Ddnw0h_BmxW/", "video": true, "ratio": 0, "score": 0.25, "status": "未处理", "x": 0.9}]</script>
+<script>
+const DATA = JSON.parse(document.getElementById('data').textContent);
+const SUPA = 'https://akfdllsqopkajaqzwvzx.supabase.co';
+const ANON = 'sb_publishable_fe2gcnJROojRMm3HuTRKtA_igfDqNX4';
+const STATUSES = ["未处理", "拍摄中", "已处理", "跳过"];
+document.getElementById('updated').textContent = '更新于 2026-11-13 11:42 (GMT+8)';
+const PAGE = 48;
+let shown = PAGE;
+let videoOnly = false;
+let curTab = '全部';
+
+const $ = id => document.getElementById(id);
+const fmt = n => n >= 1e6 ? (n/1e6).toFixed(1)+'M' : n >= 1e3 ? (n/1e3).toFixed(1)+'K' : String(n);
+const getKey = () => ANON;  // anon key is baked in — safe, can only change status
+const I = n => '<svg class="ic"><use href="#i-' + n + '"/></svg>';
+const esc = s => String(s).replace(/[&<>"']/g, ch => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[ch]));
+const byRec = {}; DATA.forEach(d => byRec[d.id] = d);
+const TRENDS = [];
+DATA.forEach(d => {
+  d.days = d.date ? Math.max(0, Math.floor((Date.now() - new Date(d.date + 'T00:00:00')) / 864e5)) : null;
+  d.horse = d.followers > 0 && d.followers < 50000 && ((d.x || 0) >= 2 || d.score >= 10);
+});
+const PRESETS = [
+  { k: 'px', icon: 'trend', label: '真爆款 ×2+', f: d => (d.x || 0) >= 2 },
+  { k: 'pn', icon: 'star', label: '近7天', f: d => d.days !== null && d.days <= 7 },
+  { k: 'ph', icon: 'zap', label: '黑马', f: d => d.horse },
+  { k: 'pb', icon: 'magnet', label: '引流帖', f: d => d.bait },
+];
+const presetOn = {};
+
+function toast(msg, ok) {
+  const t = $('toast'); t.textContent = msg; t.classList.add('show');
+  t.style.borderColor = ok ? 'var(--green)' : 'var(--red)';
+  clearTimeout(t._h); t._h = setTimeout(() => t.classList.remove('show'), 2600);
+}
+
+// filters
+const comps = [...new Set(DATA.map(d => d.competitor))].sort();
+comps.forEach(c => { const o = document.createElement('option'); o.value = c; o.textContent = '@'+c; $('fComp').appendChild(o); });
+[...new Set(DATA.map(d => d.tracker))].forEach(t => { const o = document.createElement('option'); o.value = t; o.textContent = t; $('fTracker').appendChild(o); });
+
+function matchQ(d) {
+  const q = ($('fSearch').value || '').trim().toLowerCase();
+  return !q || (d.caption + ' ' + (d.tags || '') + ' ' + (d.transcript || '') + ' ' + (d.brk || '') + ' ' + d.competitor).toLowerCase().includes(q);
+}
+
+function basePool() {
+  const t = $('fTracker').value, c = $('fComp').value;
+  return DATA.filter(d => (!t || d.tracker === t) && (!c || d.competitor === c) && (!videoOnly || d.video)
+    && matchQ(d) && PRESETS.every(p => !presetOn[p.k] || p.f(d)));
+}
+
+function filtered() {
+  const s = $('fSort').value;
+  let arr = basePool().filter(d => curTab === '全部' || d.status === curTab);
+  const key = { score:'score', er:'er', comments:'comments', likes:'likes', x:'x' }[s];
+  if (s === 'date') arr.sort((a,b) => (b.date||'').localeCompare(a.date||''));
+  else arr.sort((a,b) => (b[key]||0) - (a[key]||0));
+  return arr;
+}
+
+let dragRec = null;
+
+function renderTabs() {
+  const pool = basePool();
+  const counts = { '全部': pool.length };
+  STATUSES.forEach(s => counts[s] = pool.filter(d => d.status === s).length);
+  $('tabs').innerHTML = '';
+  ['全部', ...STATUSES].forEach(name => {
+    const el = document.createElement('div');
+    el.className = 'tab' + (curTab === name ? ' on' : '') + (name !== '全部' ? ' droppable' : '');
+    el.innerHTML = esc(name) + ' <span class="cnt">' + counts[name] + '</span>';
+    el.onclick = () => { curTab = name; shown = PAGE; render(); };
+    if (name !== '全部') {
+      el.ondragover = e => { if (dragRec) { e.preventDefault(); el.classList.add('over'); } };
+      el.ondragleave = () => el.classList.remove('over');
+      el.ondrop = e => {
+        e.preventDefault(); el.classList.remove('over');
+        const d = byRec[dragRec]; dragRec = null;
+        if (d && d.status !== name) setStatus(d, name);
+      };
+    }
+    $('tabs').appendChild(el);
+  });
+}
+
+const io = new IntersectionObserver(entries => {
+  entries.forEach(e => {
+    if (e.isIntersecting) {
+      const el = e.target, pid = el.dataset.pid;
+      if (!el.querySelector('iframe')) {
+        const f = document.createElement('iframe');
+        f.src = 'https://www.instagram.com/p/' + pid + '/embed/';
+        f.loading = 'lazy'; f.allow = 'autoplay; encrypted-media';
+        el.appendChild(f);
+      }
+      io.unobserve(el);
+    }
+  });
+}, { rootMargin: '400px' });
+
+async function setStatus(d, val) {
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?post_id=eq.' + encodeURIComponent(d.id), {
+      method: 'PATCH',
+      headers: { 'apikey': ANON, 'Content-Type': 'application/json', 'Prefer': 'return=minimal' },
+      body: JSON.stringify({ status: val })
+    });
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    d.status = val;
+    cacheStatus(d.id, val);
+    toast('✓ @' + d.competitor + ' 已移到「' + val + '」', true);
+  } catch (e) {
+    toast('更新失败: ' + e.message + (String(e.message).includes('401') || String(e.message).includes('403') ? ' — 密钥无效?' : ''), false);
+  }
+  render();
+}
+
+function card(d, idx) {
+  const el = document.createElement('div');
+  el.className = 'card' + ((d.x || 0) >= 2 ? ' outlier' : '');
+  el.style.animationDelay = Math.min(idx % PAGE, 14) * 30 + 'ms';
+  el.draggable = true;
+  el.ondragstart = e => {
+    dragRec = d.id;
+    e.dataTransfer.effectAllowed = 'move';
+    el.classList.add('lifting');
+    document.body.classList.add('dragging');
+  };
+  el.ondragend = () => {
+    el.classList.remove('lifting');
+    document.body.classList.remove('dragging');
+    dragRec = null;
+  };
+  const typeIcon = d.video ? 'video' : (d.type === 'Carousel' ? 'layers' : 'image');
+  const days = d.days, horse = d.horse;
+  const ago = days === null ? '' : (days === 0 ? '今天' : days + '天前');
+  const lines = (d.caption || '').split('\n').map(l => l.trim()).filter(Boolean);
+  const hook = lines[0] || '';
+  const tr = (d.transcript && d.transcript !== '(转录失败)' && d.transcript !== '(无口播内容)') ? d.transcript : '';
+  el.innerHTML = `
+    <div class="embed" data-pid="${d.id}"><div class="ph"><svg class="ic"><use href="#i-${typeIcon}"/></svg></div></div>
+    <div class="meta">
+      <div class="row1">
+        <span class="handle" title="拖到上方 tab 即可归类">${I('grip')}</span>
+        <a class="who" href="https://www.instagram.com/${d.competitor}/" target="_blank">@${d.competitor}</a>
+        <span class="badge">${d.type || '-'}</span>
+        ${days !== null && days <= 7 ? '<span class="badge bnew">' + I('star') + '新帖</span>' : ''}
+        ${horse ? '<span class="badge bhorse">' + I('zap') + '黑马</span>' : ''}
+        ${d.bait ? '<span class="badge bbait" title="「留言XX」引流打法 — 评论被引流放大,漏斗设计值得学">' + I('magnet') + '引流</span>' : ''}
+        <span class="date" title="${d.date || ''}">${ago}</span>
+      </div>
+      <div class="nums">
+        <span class="num hot" title="Viral Score">${I('flame')}<b>${d.score}</b></span>
+        ${(d.x || 0) >= 2 ? '<span class="num x" title="是自家平均热度的多少倍">' + I('trend') + '<b>×' + d.x + '</b></span>' : ''}
+        <span class="num er" title="Engagement Rate">${I('pct')}<b>${d.er}%</b></span>
+        <span class="num" title="Likes">${I('heart')}<b>${d.likes > 0 ? fmt(d.likes) : '隐藏'}</b></span>
+        <span class="num" title="Comments">${I('msg')}<b>${fmt(d.comments)}</b></span>
+        <span class="num" title="Followers">${I('users')}<b>${fmt(d.followers)}</b></span>
+      </div>
+      <div class="cap" onclick="this.classList.toggle('open')"></div>
+      ${d.brk ? '<div class="ai" onclick="this.classList.toggle(&quot;open&quot;)"></div>' : ''}
+      ${d.my ? '<div class="mine" onclick="this.classList.toggle(&quot;open&quot;)"></div>' : ''}
+      <div class="srow"><label>状态</label><select class="status btn s${d.status}"></select>
+        <button class="abtn copy" title="复制完整文案">${I('copy')}文案</button>
+        ${tr ? '<button class="abtn mic" title="复制视频口播逐字稿">' + I('mic') + '口播</button>' : ''}
+        ${d.my ? '<button class="abtn minec" title="复制我的改写口播稿(可直接拍)">' + I('mic') + '我的稿</button>' : ''}
+        <button class="abtn brief" title="复制拍摄 Brief(数据+Hook+AI拆解+我的稿+口播稿+文案)">${I('clip')}Brief</button>
+        <a class="abtn" href="${d.url}" target="_blank" title="打开 Instagram 原帖">${I('ext')}</a></div>
+    </div>`;
+  const capEl = el.querySelector('.cap');
+  const restTxt = lines.slice(1).join('\n');
+  capEl.innerHTML = hook ? '<b>' + esc(hook) + '</b>' + (restTxt ? '<br>' + esc(restTxt).replace(/\n/g, '<br>') : '') : '';
+  const aiEl = el.querySelector('.ai');
+  if (aiEl) aiEl.innerHTML = '<b>💡 AI 拆解</b><br>' + esc(d.brk).split(String.fromCharCode(10)).join('<br>');
+  const myEl = el.querySelector('.mine');
+  if (myEl) myEl.innerHTML = '<b>🎬 我的版本(可直接拍)</b><br>' + esc(d.my).split(String.fromCharCode(10)).join('<br>');
+  const sel = el.querySelector('.status');
+  STATUSES.forEach(s => { const o = document.createElement('option'); o.value = s; o.textContent = s; sel.appendChild(o); });
+  sel.value = d.status;
+  sel.onchange = () => setStatus(d, sel.value);
+  el.querySelector('.copy').onclick = () =>
+    navigator.clipboard.writeText(d.caption || '').then(() => toast('✓ 文案已复制', true));
+  const micBtn = el.querySelector('.mic');
+  if (micBtn) micBtn.onclick = () =>
+    navigator.clipboard.writeText(tr).then(() => toast('✓ 口播稿已复制', true));
+  const mineBtn = el.querySelector('.minec');
+  if (mineBtn) mineBtn.onclick = () =>
+    navigator.clipboard.writeText(d.my).then(() => toast('✓ 我的改写稿已复制', true));
+  el.querySelector('.brief').onclick = () => {
+    const NL = String.fromCharCode(10);
+    const parts = ['🎬 爆款参考 @' + d.competitor + ((d.x || 0) >= 2 ? '(自家平均 ×' + d.x + ')' : ''),
+      '📊 🔥' + d.score + ' | ER ' + d.er + '% | ❤️ ' + (d.likes > 0 ? fmt(d.likes) : '隐藏') +
+      ' | 💬 ' + fmt(d.comments) + ' | 👥 ' + fmt(d.followers) + (ago ? ' | ' + ago : ''),
+      '🔗 ' + d.url, '✍️ Hook: ' + hook];
+    if (d.brk) parts.push('——— AI 拆解 ———', d.brk);
+    if (d.my) parts.push('——— 我的版本(可直接拍)———', d.my);
+    if (tr) parts.push('——— 竞对原口播稿 ———', tr);
+    parts.push('——— 完整文案 ———', d.caption || '');
+    navigator.clipboard.writeText(parts.join(NL)).then(() => toast('✓ Brief 已复制,可直接发给拍摄/剪辑', true));
+  };
+  io.observe(el.querySelector('.embed'));
+  return el;
+}
+
+function render() {
+  renderTabs();
+  const arr = filtered();
+  const grid = $('grid'); grid.innerHTML = '';
+  arr.slice(0, shown).forEach((d, i) => grid.appendChild(card(d, i)));
+  $('empty').style.display = arr.length ? 'none' : '';
+  $('moreWrap').style.display = arr.length > shown ? '' : 'none';
+}
+
+
+function applyStatusCache() {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    Object.keys(c).forEach(rid => { const d = byRec[rid]; if (d) d.status = c[rid]; });
+  } catch (e) {}
+}
+
+function cacheStatus(rid, val) {
+  try {
+    const c = JSON.parse(localStorage.getItem('st_cache') || '{}');
+    c[rid] = val; localStorage.setItem('st_cache', JSON.stringify(c));
+  } catch (e) {}
+}
+
+// live status refresh (so weekly-baked page shows current statuses)
+async function refreshStatuses() {
+  applyStatusCache(); render();  // last-known statuses first
+  if (Date.now() - (+localStorage.getItem('st_ts') || 0) < 600000) return;  // 10-min throttle
+  localStorage.setItem('st_ts', String(Date.now()));
+  const fresh = {};
+  try {
+    const r = await fetch(SUPA + '/rest/v1/posts?select=post_id,status', { headers: { 'apikey': ANON } });
+    if (!r.ok) return;
+    (await r.json()).forEach(row => {
+      const d = byRec[row.post_id];
+      if (d) d.status = row.status || '未处理';
+      if (row.status && row.status !== '未处理') fresh[row.post_id] = row.status;
+    });
+    localStorage.setItem('st_cache', JSON.stringify(fresh));
+    render();
+  } catch (e) {}
+}
+
+['fTracker','fComp','fSort'].forEach(id => $(id).onchange = () => { shown = PAGE; render(); });
+$('fSearch').oninput = () => { shown = PAGE; render(); };
+$('fVideo').onclick = () => { videoOnly = !videoOnly; $('fVideo').classList.toggle('on', videoOnly); shown = PAGE; render(); };
+$('moreBtn').onclick = () => { shown += PAGE; render(); };
+
+// preset quick filters
+$('presets').innerHTML = '<span class="lbl">快筛</span>';
+PRESETS.forEach(p => {
+  const c = document.createElement('span'); c.className = 'chip2';
+  c.innerHTML = I(p.icon) + esc(p.label);
+  c.onclick = () => { presetOn[p.k] = !presetOn[p.k]; c.classList.toggle('on', presetOn[p.k]); shown = PAGE; render(); };
+  $('presets').appendChild(c);
+});
+
+// trending hashtags among outlier posts
+if (TRENDS.length) {
+  $('trends').innerHTML = '<span class="lbl">爆款热词</span>';
+  TRENDS.forEach(([tag, n]) => {
+    const c = document.createElement('span'); c.className = 'chip2';
+    c.textContent = '#' + tag + ' ' + n;
+    c.onclick = () => { $('fSearch').value = $('fSearch').value === tag ? '' : tag; shown = PAGE; render(); };
+    $('trends').appendChild(c);
+  });
+} else { $('trends').style.display = 'none'; }
+
+render();
+refreshStatuses();
+</script>
+</body>
+</html>
