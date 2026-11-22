@@ -119,7 +119,8 @@ def fetch_pending():
     # (length filters live here — PostgREST cannot filter on expressions)
     return [p for p in rows
             if len((p.get("transcript") or "") if (p.get("transcript") or "") not in SKIP_TR else "") > 30
-            or len(p.get("caption") or "") > 50]
+            # short image-post captions (news headlines etc.) still give a usable topic
+            or len((p.get("caption") or "").strip()) >= 10]
 
 
 def build_prompt(p):
@@ -133,6 +134,8 @@ def build_prompt(p):
         body += f"\n【原视频口播稿(主要改写依据)】\n{tr[:2800]}\n"
     if cap:
         body += f"\n【原帖文案(辅助参考)】\n{cap}\n"
+    if not tr and len(cap.strip()) <= 50:
+        body += "\n(原帖是图片帖,只有上面这一句标题。请把它当作话题,按【人设与规矩】展开成完整口播,不要编造标题里没有的数字。)\n"
     body += "\n请按系统指令,把上面这条爆款改写成【人设与规矩】里这个人的中文口播脚本。"
     return body
 
