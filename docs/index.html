@@ -395,7 +395,7 @@ if (others.length) {
   others.forEach(h => { const o = document.createElement('option'); o.value = h; o.textContent = h + ' · ' + coCount[h]; g.appendChild(o); });
   $('fComp').appendChild(g);
 }
-PLATS.filter(p => p.k !== 'website').forEach(p => {
+PLATS.filter(p => p.k !== 'website' && p.k !== 'instagram').forEach(p => {
   const o = document.createElement('option'); o.value = p.k;
   o.textContent = p.label + ' · ' + DATA.filter(d => d.plat === p.k).length + ' 帖';
   $('fPlat').appendChild(o);
