@@ -21,6 +21,8 @@ import urllib.parse
 import urllib.request
 from datetime import datetime, timedelta, timezone
 
+from script_rules import clean_script
+
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
 SUPABASE_ANON_KEY = os.environ.get("SUPABASE_ANON_KEY", "")  # public key, baked into the page
 # Set on GitHub → Settings → Secrets and variables → Actions → Variables.
@@ -174,7 +176,7 @@ def normalize(r):
         "caption": caption,
         "transcript": tr if tr not in ("(转录失败)", "(视频不可用)", "(无口播内容)") else "",
         "brk": "" if brk.strip() == "(拆解失败)" else brk[:600],
-        "my": "" if (r.get("my_script") or "").strip() == "(改写失败)" else (r.get("my_script") or "")[:4000],
+        "my": "" if (r.get("my_script") or "").strip() == "(改写失败)" else clean_script(r.get("my_script") or "")[:4000],
         "tags": r.get("hashtags") or "",
         "bait": bool(BAIT_RE.search(caption)),
         "type": r.get("post_type") or "",

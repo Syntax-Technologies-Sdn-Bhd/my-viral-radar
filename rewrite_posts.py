@@ -28,6 +28,8 @@ import urllib.error
 import urllib.parse
 import urllib.request
 
+from script_rules import clean_script
+
 SUPABASE_URL = (os.environ.get("SUPABASE_URL") or "").rstrip("/")
 NICHE = os.environ.get("NICHE") or "自媒体内容"
 GEMINI_MODEL = os.environ.get("GEMINI_MODEL", "gemini-2.5-flash")
@@ -179,7 +181,8 @@ def rewrite_anthropic(key, p):
 
 def save(post_id, text):
     sb(f"posts?post_id=eq.{urllib.parse.quote(post_id)}", method="PATCH",
-       data={"my_script": text[:4000]}, prefer="return=minimal")
+       data={"my_script": (text if text == FAIL_MARK else clean_script(text))[:4000]},
+       prefer="return=minimal")
 
 
 def main():
